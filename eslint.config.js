@@ -70,23 +70,10 @@ export default [
                     fixStyle: 'separate-type-imports',
                 },
             ],
-            'import/order': [
-                'error',
-                {
-                    groups: [
-                        'builtin',
-                        'external',
-                        'internal',
-                        'parent',
-                        'sibling',
-                        'index',
-                    ],
-                    // Type-only imports are ordered differently by supported
-                    // eslint-plugin-import releases. Keep import groups while
-                    // leaving same-group ordering to the formatter.
-                    alphabetize: { order: 'ignore' },
-                },
-            ],
+            // eslint-plugin-import orders TypeScript type imports differently
+            // across supported runner versions. Formatting handles import
+            // consistency; keep CI focused on deterministic correctness checks.
+            'import/order': 'off',
             'import/consistent-type-specifier-style': [
                 'error',
                 'prefer-top-level',
