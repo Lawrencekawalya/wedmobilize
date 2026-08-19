@@ -257,6 +257,55 @@ class MessageCenterTest extends TestCase
         $this->assertSame('ProviderSpecificStatus', $recipient->provider_status);
     }
 
+    public function test_pasted_numbers_are_normalized_saved_as_contacts_and_sent(): void
+    {
+        $this->configureEgoSms();
+        Http::fake(['comms.egosms.co/*' => Http::response([
+            'Status' => 'OK', 'Message' => 'Successfully Sent!', 'Cost' => '70',
+            'MsgFollowUpUniqueCode' => 'ApiMSG.pasted',
+        ])]);
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->post('/messages/send', [
+            'recipient_mode' => 'paste',
+            'raw_numbers' => "0777071434\n+256700111222\n0777071434",
+            'message' => 'Welcome to the event.',
+            'send_timing' => 'now',
+        ])->assertRedirect('/messages/outbox');
+
+        $this->assertSame(2, $user->contacts()->count());
+        $this->assertDatabaseHas('contacts', ['user_id' => $user->id, 'phone' => '256777071434', 'name' => null]);
+        $this->assertSame(2, OutboundMessage::query()->sole()->recipient_count);
+    }
+
+    public function test_scheduled_message_waits_until_due_before_contacting_egosms(): void
+    {
+        $this->configureEgoSms();
+        Http::fake(['comms.egosms.co/*' => Http::response([
+            'Status' => 'OK', 'Message' => 'Successfully Sent!', 'Cost' => '35',
+            'MsgFollowUpUniqueCode' => 'ApiMSG.scheduled',
+        ])]);
+        $user = User::factory()->create();
+        $contact = $user->contacts()->create(['phone' => '256777071434']);
+        $scheduledAt = now()->addMinutes(10);
+
+        $this->actingAs($user)->post('/messages/send', [
+            'recipient_mode' => 'contacts',
+            'contact_ids' => [$contact->id],
+            'message' => 'This is scheduled.',
+            'send_timing' => 'later',
+            'scheduled_at' => $scheduledAt->toIso8601String(),
+        ])->assertRedirect('/messages/scheduled');
+
+        Http::assertNothingSent();
+        $this->assertSame('scheduled', OutboundMessage::query()->sole()->status);
+
+        $this->travelTo($scheduledAt->addSecond());
+        $this->artisan('messages:send-scheduled')->assertSuccessful();
+        $this->assertSame('submitted', OutboundMessage::query()->sole()->refresh()->status);
+        Http::assertSentCount(1);
+    }
+
     private function configureEgoSms(): void
     {
         config()->set('services.egosms', [

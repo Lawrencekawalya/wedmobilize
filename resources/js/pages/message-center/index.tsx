@@ -6,6 +6,8 @@ import {
     CheckCircle2,
     ContactRound,
     FileText,
+    ClipboardPaste,
+    Upload,
     Inbox,
     MailPlus,
     MessageCircleMore,
@@ -25,6 +27,14 @@ import type {
 } from '@/components/app/recipient-picker';
 import { SurfaceCard } from '@/components/app/surface-card';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import {
     Select,
     SelectContent,
@@ -95,14 +105,26 @@ type MessageCenterProps = {
     groups?: RecipientGroup[];
     messages?: OutboundMessage[];
     smsConfigured?: boolean;
+    smsBalance?: number | null;
+    senderId?: string | null;
+    templates?: MessageTemplate[];
+    campaigns?: MessageCampaign[];
 };
+
+type MessageTemplate = { id: number; name: string; body: string };
+type MessageCampaign = { id: number; name: string; contact_ids: number[] };
 
 type OutboundMessage = {
     id: number;
     body: string;
     recipient_mode: string;
     sender_id: string;
-    status: 'processing' | 'submitted' | 'partially_failed' | 'failed';
+    status:
+        | 'processing'
+        | 'scheduled'
+        | 'submitted'
+        | 'partially_failed'
+        | 'failed';
     recipient_count: number;
     submitted_count: number;
     failed_count: number;
@@ -112,10 +134,12 @@ type OutboundMessage = {
     cost: number | null;
     error_message: string | null;
     submitted_at: string | null;
+    scheduled_at: string | null;
     created_at: string;
 };
 
-type RecipientMode = 'all' | 'groups' | 'contacts';
+type RecipientMode =
+    'all' | 'groups' | 'contacts' | 'paste' | 'file' | 'campaign';
 
 export default function MessageCenter({
     section = 'single-bulk',
@@ -123,6 +147,10 @@ export default function MessageCenter({
     groups = [],
     messages = [],
     smsConfigured = false,
+    smsBalance = null,
+    senderId = null,
+    templates = [],
+    campaigns = [],
 }: MessageCenterProps) {
     const active = sections.find((item) => item.key === section) ?? sections[0];
     const isComposer = active.key === 'single-bulk';
@@ -167,9 +195,17 @@ export default function MessageCenter({
                             contacts={contacts}
                             groups={groups}
                             smsConfigured={smsConfigured}
+                            smsBalance={smsBalance}
+                            senderId={senderId}
+                            templates={templates}
+                            campaigns={campaigns}
                         />
-                    ) : active.key === 'outbox' ? (
-                        <Outbox messages={messages} />
+                    ) : active.key === 'outbox' ||
+                      active.key === 'scheduled' ? (
+                        <Outbox
+                            messages={messages}
+                            scheduled={active.key === 'scheduled'}
+                        />
                     ) : (
                         <EmptySection
                             title={pageContent?.title ?? active.label}
@@ -187,24 +223,59 @@ function Composer({
     contacts,
     groups,
     smsConfigured,
+    smsBalance,
+    senderId,
+    templates,
+    campaigns,
 }: {
     contacts: RecipientContact[];
     groups: RecipientGroup[];
     smsConfigured: boolean;
+    smsBalance: number | null;
+    senderId: string | null;
+    templates: MessageTemplate[];
+    campaigns: MessageCampaign[];
 }) {
     const [recipientMode, setRecipientMode] = useState<RecipientMode | null>(
         null,
     );
     const [recipients, setRecipients] = useState<RecipientSelection[]>([]);
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    const [templateOpen, setTemplateOpen] = useState(false);
+    const templateForm = useForm({ name: '', body: '' });
     const form = useForm({
         recipient_mode: '' as RecipientMode | '',
         group_ids: [] as number[],
         contact_ids: [] as number[],
         message: '',
+        raw_numbers: '',
+        recipient_file: null as File | null,
+        campaign_id: '',
+        campaign_name: '',
+        template_id: '',
+        send_timing: 'now' as 'now' | 'later',
+        scheduled_at: '',
     });
     const recipientCount = useMemo(() => {
         if (recipientMode === 'all') {
             return contacts.length;
+        }
+
+        if (recipientMode === 'paste') {
+            return new Set(
+                form.data.raw_numbers
+                    .split(/[\s,;]+/)
+                    .map((value) => value.replace(/\D/g, ''))
+                    .filter(Boolean),
+            ).size;
+        }
+
+        if (recipientMode === 'campaign') {
+            return (
+                campaigns.find(
+                    (campaign) => String(campaign.id) === form.data.campaign_id,
+                )?.contact_ids.length ?? 0
+            );
         }
 
         const ids = new Set<number>();
@@ -220,18 +291,36 @@ function Composer({
         });
 
         return ids.size;
-    }, [contacts.length, groups, recipientMode, recipients]);
-    const smsCount = Math.max(1, Math.ceil(form.data.message.length / 160));
+    }, [
+        campaigns,
+        contacts.length,
+        form.data.campaign_id,
+        form.data.raw_numbers,
+        groups,
+        recipientMode,
+        recipients,
+    ]);
+    const unicode = /[^\x20-\x7E\n\r]/.test(form.data.message);
+    const singleLimit = unicode ? 70 : 160;
+    const multiLimit = unicode ? 67 : 153;
+    const smsCount = Math.max(
+        1,
+        form.data.message.length <= singleLimit
+            ? 1
+            : Math.ceil(form.data.message.length / multiLimit),
+    );
+    const hasRecipients =
+        recipientMode === 'file'
+            ? form.data.recipient_file !== null
+            : recipientCount > 0;
     const canSend =
         smsConfigured &&
         recipientMode !== null &&
-        recipientCount > 0 &&
+        hasRecipients &&
         form.data.message.trim().length > 0 &&
         !form.processing;
 
-    function submit(event: FormEvent<HTMLFormElement>) {
-        event.preventDefault();
-
+    function submit() {
         if (recipientMode === null) {
             return;
         }
@@ -248,7 +337,11 @@ function Composer({
                     ? recipients.map((recipient) => recipient.id)
                     : [],
         }));
-        form.post('/messages/send', { preserveScroll: true });
+        form.post('/messages/send', {
+            preserveScroll: true,
+            forceFormData: true,
+            onFinish: () => setConfirmOpen(false),
+        });
     }
 
     return (
@@ -269,7 +362,35 @@ function Composer({
                     <Send className="size-5" />
                 </div>
             </div>
-            <form className="mt-8 grid gap-6" onSubmit={submit}>
+            <form
+                className="mt-8 grid gap-6"
+                onSubmit={(event: FormEvent<HTMLFormElement>) =>
+                    event.preventDefault()
+                }
+            >
+                <div className="grid gap-3 rounded-2xl bg-sky-50/60 p-4 sm:grid-cols-2">
+                    <div>
+                        <span className="text-xs text-[#7187a0]">
+                            EgoSMS balance
+                        </span>
+                        <p className="font-semibold text-[#172a45]">
+                            {smsBalance === null
+                                ? 'Unavailable'
+                                : `UGX ${smsBalance.toLocaleString()}`}
+                        </p>
+                    </div>
+                    <div>
+                        <span className="text-xs text-[#7187a0]">
+                            Requested sender ID
+                        </span>
+                        <p className="font-semibold text-[#172a45]">
+                            {senderId ?? 'Not configured'}
+                        </p>
+                        <p className="text-xs text-[#7187a0]">
+                            EgoSMS may apply a network-approved default.
+                        </p>
+                    </div>
+                </div>
                 <div className="grid gap-2 text-sm font-medium text-[#172a45]">
                     <span>Recipients</span>
                     <Select
@@ -295,6 +416,18 @@ function Composer({
                             <SelectItem value="contacts" className="py-3">
                                 <UserRound className="size-4 text-[#00a973]" />
                                 Select contacts
+                            </SelectItem>
+                            <SelectItem value="paste" className="py-3">
+                                <ClipboardPaste className="size-4 text-[#00a973]" />
+                                Paste phone numbers
+                            </SelectItem>
+                            <SelectItem value="file" className="py-3">
+                                <Upload className="size-4 text-[#00a973]" />
+                                Upload CSV / Excel
+                            </SelectItem>
+                            <SelectItem value="campaign" className="py-3">
+                                <Sparkles className="size-4 text-[#00a973]" />
+                                Saved campaign
                             </SelectItem>
                         </SelectContent>
                     </Select>
@@ -337,6 +470,53 @@ function Composer({
                             value={recipients}
                             onChange={setRecipients}
                         />
+                    )}
+                    {recipientMode === 'paste' && (
+                        <textarea
+                            rows={4}
+                            value={form.data.raw_numbers}
+                            onChange={(event) =>
+                                form.setData('raw_numbers', event.target.value)
+                            }
+                            placeholder="Paste numbers separated by spaces, commas, or new lines"
+                            className="rounded-xl border border-sky-100 p-3 font-normal outline-none focus:border-[#00bf83]"
+                        />
+                    )}
+                    {recipientMode === 'file' && (
+                        <input
+                            type="file"
+                            accept=".csv,.xlsx"
+                            onChange={(event) =>
+                                form.setData(
+                                    'recipient_file',
+                                    event.target.files?.[0] ?? null,
+                                )
+                            }
+                            className="rounded-xl border border-dashed border-sky-200 p-4 font-normal"
+                        />
+                    )}
+                    {recipientMode === 'campaign' && (
+                        <Select
+                            value={form.data.campaign_id}
+                            onValueChange={(value) =>
+                                form.setData('campaign_id', value)
+                            }
+                        >
+                            <SelectTrigger className="h-12 rounded-xl">
+                                <SelectValue placeholder="Choose a saved campaign" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {campaigns.map((campaign) => (
+                                    <SelectItem
+                                        key={campaign.id}
+                                        value={String(campaign.id)}
+                                    >
+                                        {campaign.name} ·{' '}
+                                        {campaign.contact_ids.length} contacts
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     )}
 
                     {((recipientMode === 'groups' && groups.length === 0) ||
@@ -396,11 +576,72 @@ function Composer({
                         </span>
                     )}
                 </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="grid gap-2 text-sm font-medium text-[#172a45]">
+                        <div className="flex items-center justify-between">
+                            <span>Message template</span>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    templateForm.setData({
+                                        name: '',
+                                        body: form.data.message,
+                                    });
+                                    setTemplateOpen(true);
+                                }}
+                                className="text-xs text-[#00a973]"
+                            >
+                                Save current
+                            </button>
+                        </div>
+                        <Select
+                            value={form.data.template_id}
+                            onValueChange={(value) => {
+                                form.setData('template_id', value);
+                                const template = templates.find(
+                                    (item) => String(item.id) === value,
+                                );
+
+                                if (template) {
+                                    form.setData('message', template.body);
+                                }
+                            }}
+                        >
+                            <SelectTrigger className="h-11 rounded-xl">
+                                <SelectValue placeholder="No template selected" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {templates.map((template) => (
+                                    <SelectItem
+                                        key={template.id}
+                                        value={String(template.id)}
+                                    >
+                                        {template.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <label className="grid gap-2 text-sm font-medium text-[#172a45]">
+                        <span>Save recipients as campaign (optional)</span>
+                        <input
+                            value={form.data.campaign_name}
+                            onChange={(event) =>
+                                form.setData(
+                                    'campaign_name',
+                                    event.target.value,
+                                )
+                            }
+                            placeholder="e.g. Introduction committee"
+                            className="h-11 rounded-xl border border-sky-100 px-3 outline-none"
+                        />
+                    </label>
+                </div>
                 <label className="grid gap-2 text-sm font-medium text-[#172a45]">
                     <span>Message</span>
                     <textarea
                         rows={6}
-                        maxLength={480}
+                        maxLength={640}
                         value={form.data.message}
                         onChange={(event) =>
                             form.setData('message', event.target.value)
@@ -409,8 +650,20 @@ function Composer({
                         className="resize-none rounded-xl border border-sky-100 p-3 text-sm outline-none placeholder:text-[#9baec2] focus:border-[#00bf83] focus:ring-2 focus:ring-emerald-100"
                     />
                     <span className="text-right text-xs font-normal text-[#7187a0]">
-                        {form.data.message.length} / 480 characters · {smsCount}{' '}
+                        {form.data.message.length} / 640 characters · {smsCount}{' '}
                         {smsCount === 1 ? 'SMS' : 'SMS parts'}
+                    </span>
+                    <span
+                        className={`text-xs font-normal ${unicode ? 'text-amber-600' : 'text-[#7187a0]'}`}
+                    >
+                        {unicode
+                            ? 'Unicode detected: each SMS part has a lower character limit.'
+                            : 'GSM-7 message encoding.'}{' '}
+                        Estimated units:{' '}
+                        {recipientMode === 'file'
+                            ? 'calculated after upload'
+                            : recipientCount * smsCount}
+                        .
                     </span>
                     {form.errors.message && (
                         <span className="text-xs font-normal text-red-600">
@@ -418,6 +671,36 @@ function Composer({
                         </span>
                     )}
                 </label>
+                <div className="grid gap-3 sm:grid-cols-2">
+                    <label className="flex items-center gap-2 text-sm text-[#172a45]">
+                        <input
+                            type="radio"
+                            checked={form.data.send_timing === 'now'}
+                            onChange={() => form.setData('send_timing', 'now')}
+                        />
+                        Send now
+                    </label>
+                    <label className="flex items-center gap-2 text-sm text-[#172a45]">
+                        <input
+                            type="radio"
+                            checked={form.data.send_timing === 'later'}
+                            onChange={() =>
+                                form.setData('send_timing', 'later')
+                            }
+                        />
+                        Send later
+                    </label>
+                    {form.data.send_timing === 'later' && (
+                        <input
+                            type="datetime-local"
+                            value={form.data.scheduled_at}
+                            onChange={(event) =>
+                                form.setData('scheduled_at', event.target.value)
+                            }
+                            className="h-11 rounded-xl border border-sky-100 px-3 sm:col-span-2"
+                        />
+                    )}
+                </div>
                 <div className="flex flex-col-reverse gap-3 border-t border-slate-100 pt-6 sm:flex-row sm:items-center sm:justify-between">
                     <p className="text-sm text-[#7187a0]">
                         {smsConfigured
@@ -425,8 +708,9 @@ function Composer({
                             : 'EgoSMS credentials and sender ID must be configured before sending.'}
                     </p>
                     <Button
-                        type="submit"
+                        type="button"
                         disabled={!canSend}
+                        onClick={() => setConfirmOpen(true)}
                         className="h-11 rounded-xl bg-[#172a45] px-5"
                     >
                         <Send className="size-4" />
@@ -434,18 +718,129 @@ function Composer({
                     </Button>
                 </div>
             </form>
+            <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+                <DialogContent className="rounded-3xl sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Confirm SMS submission</DialogTitle>
+                        <DialogDescription>
+                            Review the send before it reaches EgoSMS.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-2 rounded-2xl bg-slate-50 p-4 text-sm text-[#466582]">
+                        <p>
+                            <strong className="text-[#172a45]">
+                                Recipients:
+                            </strong>{' '}
+                            {recipientMode === 'file'
+                                ? 'from uploaded file'
+                                : recipientCount}
+                        </p>
+                        <p>
+                            <strong className="text-[#172a45]">Sender:</strong>{' '}
+                            {senderId}
+                        </p>
+                        <p>
+                            <strong className="text-[#172a45]">Message:</strong>{' '}
+                            {smsCount} part(s), {unicode ? 'Unicode' : 'GSM-7'}
+                        </p>
+                        <p>
+                            <strong className="text-[#172a45]">Timing:</strong>{' '}
+                            {form.data.send_timing === 'now'
+                                ? 'Send now'
+                                : form.data.scheduled_at}
+                        </p>
+                    </div>
+                    <DialogFooter>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setConfirmOpen(false)}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            type="button"
+                            disabled={form.processing}
+                            onClick={submit}
+                            className="bg-[#172a45]"
+                        >
+                            {form.processing
+                                ? 'Submitting…'
+                                : 'Confirm and send'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+            <Dialog open={templateOpen} onOpenChange={setTemplateOpen}>
+                <DialogContent className="rounded-3xl sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Save message template</DialogTitle>
+                        <DialogDescription>
+                            Reuse this message in future sends.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <input
+                        value={templateForm.data.name}
+                        onChange={(event) =>
+                            templateForm.setData('name', event.target.value)
+                        }
+                        placeholder="Template name"
+                        className="h-11 rounded-xl border border-sky-100 px-3"
+                    />
+                    <DialogFooter>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setTemplateOpen(false)}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            type="button"
+                            disabled={
+                                templateForm.processing ||
+                                !templateForm.data.name ||
+                                !templateForm.data.body
+                            }
+                            onClick={() =>
+                                templateForm.post('/messages/templates', {
+                                    preserveScroll: true,
+                                    onSuccess: () => setTemplateOpen(false),
+                                })
+                            }
+                            className="bg-[#172a45]"
+                        >
+                            Save template
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </SurfaceCard>
     );
 }
 
-function Outbox({ messages }: { messages: OutboundMessage[] }) {
+function Outbox({
+    messages,
+    scheduled = false,
+}: {
+    messages: OutboundMessage[];
+    scheduled?: boolean;
+}) {
     if (messages.length === 0) {
         return (
             <section className="rounded-3xl border border-slate-100 bg-white shadow-sm shadow-slate-200/70">
                 <EmptyState
                     icon={Send}
-                    title="No messages sent yet"
-                    description="Messages submitted to EgoSMS and their delivery progress will appear here."
+                    title={
+                        scheduled
+                            ? 'No scheduled messages'
+                            : 'No messages sent yet'
+                    }
+                    description={
+                        scheduled
+                            ? 'Messages planned for later will appear here.'
+                            : 'Messages submitted to EgoSMS and their delivery progress will appear here.'
+                    }
                     action={
                         <Button asChild className="rounded-xl bg-[#172a45]">
                             <Link href="/messages/single-bulk">
@@ -462,13 +857,15 @@ function Outbox({ messages }: { messages: OutboundMessage[] }) {
         <SurfaceCard contentClassName="p-5 sm:p-7">
             <div className="border-b border-slate-100 pb-5">
                 <p className="text-sm font-medium text-[#00a973]">
-                    EgoSMS activity
+                    {scheduled ? 'Planned messages' : 'EgoSMS activity'}
                 </p>
                 <h2 className="mt-1 text-2xl font-semibold text-[#172a45]">
-                    Outbox
+                    {scheduled ? 'Scheduled SMS' : 'Outbox'}
                 </h2>
                 <p className="mt-2 text-sm text-[#5d7696]">
-                    Submitted messages and the latest delivery progress.
+                    {scheduled
+                        ? 'Messages waiting for their scheduled send time.'
+                        : 'Submitted messages and the latest delivery progress.'}
                 </p>
             </div>
             <div className="divide-y divide-slate-100">
@@ -524,7 +921,13 @@ function Outbox({ messages }: { messages: OutboundMessage[] }) {
                                     {new Intl.DateTimeFormat(undefined, {
                                         dateStyle: 'medium',
                                         timeStyle: 'short',
-                                    }).format(new Date(message.created_at))}
+                                    }).format(
+                                        new Date(
+                                            scheduled && message.scheduled_at
+                                                ? message.scheduled_at
+                                                : message.created_at,
+                                        ),
+                                    )}
                                 </p>
                             </div>
                         </article>

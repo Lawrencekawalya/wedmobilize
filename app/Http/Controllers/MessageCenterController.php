@@ -3,9 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\SendSmsRequest;
+use App\Services\EgoSms\EgoSmsClient;
+use App\Services\EgoSms\EgoSmsException;
+use App\Services\Messaging\ContactIngestionService;
 use App\Services\Messaging\SendSmsService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -48,14 +53,15 @@ class MessageCenterController extends Controller
                 'contact_ids' => $group->contacts->pluck('id')->values(),
             ]);
 
-        $messages = $section === 'outbox'
+        $messages = in_array($section, ['outbox', 'scheduled'], true)
             ? $request->user()->outboundMessages()
+                ->when($section === 'scheduled', fn ($query) => $query->where('status', 'scheduled'))
                 ->latest()
                 ->limit(50)
                 ->select([
                     'id', 'body', 'recipient_mode', 'sender_id', 'status',
                     'recipient_count', 'submitted_count', 'failed_count',
-                    'cost', 'error_message', 'submitted_at', 'created_at',
+                    'cost', 'error_message', 'submitted_at', 'scheduled_at', 'created_at',
                 ])
                 ->withCount([
                     'recipients as sent_count' => fn ($query) => $query->where('status', 'sent'),
@@ -65,26 +71,60 @@ class MessageCenterController extends Controller
                 ->get()
             : [];
 
+        $smsConfigured = collect(['endpoint', 'username', 'password', 'sender_id'])
+            ->every(fn (string $key) => filled(config("services.egosms.{$key}")));
+        $balance = null;
+        if ($smsConfigured && $section === 'single-bulk') {
+            try {
+                $balance = Cache::remember('egosms.balance', 60, fn () => app(EgoSmsClient::class)->balance());
+            } catch (EgoSmsException) {
+                $balance = null;
+            }
+        }
+
         return Inertia::render('message-center/index', [
             'section' => $section,
             'contacts' => $contacts,
             'groups' => $groups,
             'messages' => $messages,
-            'smsConfigured' => collect(['endpoint', 'username', 'password', 'sender_id'])
-                ->every(fn (string $key) => filled(config("services.egosms.{$key}"))),
+            'smsConfigured' => $smsConfigured,
+            'smsBalance' => $balance,
+            'senderId' => config('services.egosms.sender_id'),
+            'templates' => $request->user()->messageTemplates()->orderBy('name')->get(['id', 'name', 'body']),
+            'campaigns' => $request->user()->messageCampaigns()->latest()->get(['id', 'name', 'contact_ids']),
         ]);
     }
 
-    public function send(SendSmsRequest $request, SendSmsService $service): RedirectResponse
+    public function send(SendSmsRequest $request, SendSmsService $service, ContactIngestionService $ingestion): RedirectResponse
     {
         $data = $request->validated();
+        $mode = $data['recipient_mode'];
+        $contactIds = $data['contact_ids'] ?? [];
+        if ($mode === 'paste') {
+            $contactIds = $ingestion->fromPasted($request->user(), $data['raw_numbers'])->pluck('id')->all();
+        } elseif ($mode === 'file') {
+            $contactIds = $ingestion->fromFile($request->user(), $request->file('recipient_file'))->pluck('id')->all();
+        } elseif ($mode === 'campaign') {
+            $campaign = $request->user()->messageCampaigns()->whereKey($data['campaign_id'])->firstOrFail();
+            $contactIds = $campaign->contact_ids;
+        }
+        $effectiveMode = in_array($mode, ['paste', 'file', 'campaign'], true) ? $mode : $data['recipient_mode'];
         $message = $service->send(
             $request->user(),
-            $data['recipient_mode'],
+            $effectiveMode,
             $data['message'],
             $data['group_ids'] ?? [],
-            $data['contact_ids'] ?? [],
+            $contactIds,
+            ($data['send_timing'] ?? 'now') === 'later' ? Carbon::parse($data['scheduled_at']) : null,
+            $data['campaign_name'] ?? null,
+            isset($data['template_id']) ? (int) $data['template_id'] : null,
         );
+
+        if ($message->status === 'scheduled') {
+            Inertia::flash('toast', ['type' => 'success', 'message' => 'Message scheduled successfully.']);
+
+            return to_route('messages.show', ['section' => 'scheduled']);
+        }
 
         if ($message->status === 'failed') {
             Inertia::flash('toast', [

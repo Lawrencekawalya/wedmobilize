@@ -51,6 +51,18 @@ class User extends Authenticatable
         return $this->hasMany(OutboundMessage::class);
     }
 
+    /** @return HasMany<MessageTemplate, $this> */
+    public function messageTemplates(): HasMany
+    {
+        return $this->hasMany(MessageTemplate::class);
+    }
+
+    /** @return HasMany<MessageCampaign, $this> */
+    public function messageCampaigns(): HasMany
+    {
+        return $this->hasMany(MessageCampaign::class);
+    }
+
     /**
      * Get the attributes that should be cast.
      *

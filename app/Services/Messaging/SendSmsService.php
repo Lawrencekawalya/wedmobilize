@@ -6,6 +6,7 @@ use App\Models\OutboundMessage;
 use App\Models\User;
 use App\Services\EgoSms\EgoSmsClient;
 use App\Services\EgoSms\EgoSmsException;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -20,19 +21,36 @@ class SendSmsService
      * @param  list<int>  $groupIds
      * @param  list<int>  $contactIds
      */
-    public function send(User $user, string $mode, string $body, array $groupIds = [], array $contactIds = []): OutboundMessage
-    {
+    public function send(
+        User $user,
+        string $mode,
+        string $body,
+        array $groupIds = [],
+        array $contactIds = [],
+        ?Carbon $scheduledAt = null,
+        ?string $campaignName = null,
+        ?int $templateId = null,
+    ): OutboundMessage {
         $contacts = $this->recipientResolver->resolve($user, $mode, $groupIds, $contactIds);
         $senderId = (string) config('services.egosms.sender_id');
+        $metrics = app(SmsMetrics::class)->calculate($body);
+        $campaign = filled($campaignName)
+            ? $user->messageCampaigns()->updateOrCreate(['name' => $campaignName], ['contact_ids' => $contacts->pluck('id')->all()])
+            : null;
 
-        $outboundMessage = DB::transaction(function () use ($user, $mode, $body, $contacts, $senderId) {
+        $outboundMessage = DB::transaction(function () use ($user, $mode, $body, $contacts, $senderId, $metrics, $scheduledAt, $campaign, $templateId) {
             $message = $user->outboundMessages()->create([
                 'body' => $body,
+                'message_template_id' => $templateId,
+                'message_campaign_id' => $campaign?->id,
                 'recipient_mode' => $mode,
                 'provider' => 'egosms',
                 'sender_id' => $senderId,
-                'status' => 'processing',
+                'status' => $scheduledAt === null ? 'processing' : 'scheduled',
                 'recipient_count' => $contacts->count(),
+                'sms_parts' => $metrics['parts'],
+                'estimated_units' => $metrics['parts'] * $contacts->count(),
+                'scheduled_at' => $scheduledAt,
             ]);
 
             $message->recipients()->createMany($contacts->map(fn ($contact) => [
@@ -43,6 +61,14 @@ class SendSmsService
 
             return $message;
         });
+
+        return $scheduledAt === null ? $this->dispatch($outboundMessage) : $outboundMessage->refresh();
+    }
+
+    public function dispatch(OutboundMessage $outboundMessage): OutboundMessage
+    {
+        $outboundMessage->update(['status' => 'processing', 'error_message' => null]);
+        $body = $outboundMessage->body;
 
         $batchSize = max(1, min((int) config('services.egosms.batch_size', 500), 1000));
         $totalCost = 0;

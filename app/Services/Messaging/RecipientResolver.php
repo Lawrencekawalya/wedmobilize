@@ -32,7 +32,7 @@ class RecipientResolver
             $query->whereHas('groups', fn (Builder $builder) => $builder->whereIn('contact_groups.id', $ownedGroupIds));
         }
 
-        if ($mode === 'contacts') {
+        if (in_array($mode, ['contacts', 'paste', 'file', 'campaign'], true)) {
             $requestedContactIds = collect($contactIds)->unique()->values();
             $query->whereIn('id', $requestedContactIds);
             $contacts = $query->get(['id', 'name', 'phone']);
