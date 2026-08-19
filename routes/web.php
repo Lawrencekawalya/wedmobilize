@@ -10,6 +10,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('contacts', [ContactController::class, 'index'])->name('contacts.index');
     Route::post('contacts', [ContactController::class, 'store'])->name('contacts.store');
     Route::post('contacts/groups', [ContactController::class, 'storeGroup'])->name('contacts.groups.store');
+    Route::put('contacts/groups/{group}', [ContactController::class, 'updateGroup'])->name('contacts.groups.update');
+    Route::delete('contacts/groups/{group}', [ContactController::class, 'destroyGroup'])->name('contacts.groups.destroy');
 
     Route::inertia('messages/single-bulk', 'message-center/index', [
         'section' => 'single-bulk',

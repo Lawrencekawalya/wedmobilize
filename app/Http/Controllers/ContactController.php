@@ -35,4 +35,21 @@ class ContactController extends Controller
 
         return back()->with('success', 'Group created.');
     }
+
+    public function updateGroup(Request $request, ContactGroup $group): RedirectResponse
+    {
+        abort_unless($group->user_id === $request->user()->id, 404);
+        $data = $request->validate(['name' => ['required', 'string', 'max:255'], 'description' => ['nullable', 'string', 'max:500']]);
+        $group->update($data);
+
+        return back()->with('success', 'Group updated.');
+    }
+
+    public function destroyGroup(Request $request, ContactGroup $group): RedirectResponse
+    {
+        abort_unless($group->user_id === $request->user()->id, 404);
+        $group->delete();
+
+        return back()->with('success', 'Group deleted. Contacts were kept.');
+    }
 }

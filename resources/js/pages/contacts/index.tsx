@@ -1,5 +1,5 @@
-import { Head, useForm } from '@inertiajs/react';
-import { ContactRound, FolderPlus, Upload } from 'lucide-react';
+import { Head, router, useForm } from '@inertiajs/react';
+import { ContactRound, FolderPlus, Pencil, Trash2, Upload } from 'lucide-react';
 
 type Group = { id: number; name: string; contacts_count: number };
 type Contact = {
@@ -25,6 +25,13 @@ export default function Contacts({
         group_ids: [] as number[],
     });
     const group = useForm({ name: '', description: '' });
+    const editGroup = (item: Group) => {
+        const name = window.prompt('Group name', item.name);
+
+        if (name?.trim()) {
+router.put(`/contacts/groups/${item.id}`, { name: name.trim() });
+}
+    };
 
     return (
         <>
@@ -160,10 +167,40 @@ export default function Contacts({
                                 {groups.map((item) => (
                                     <div
                                         key={item.id}
-                                        className="flex justify-between"
+                                        className="flex items-center justify-between gap-2 rounded-xl bg-white/70 px-3 py-2"
                                     >
-                                        <span>{item.name}</span>
-                                        <span>{item.contacts_count}</span>
+                                        <span>
+                                            {item.name}{' '}
+                                            <span className="text-xs">
+                                                ({item.contacts_count})
+                                            </span>
+                                        </span>
+                                        <span className="flex gap-1">
+                                            <button
+                                                type="button"
+                                                onClick={() => editGroup(item)}
+                                                className="p-1 text-sky-700"
+                                            >
+                                                <Pencil className="size-3.5" />
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    if (
+                                                        window.confirm(
+                                                            `Delete ${item.name}? Contacts will remain.`,
+                                                        )
+                                                    ) {
+router.delete(
+                                                            `/contacts/groups/${item.id}`,
+                                                        );
+}
+                                                }}
+                                                className="p-1 text-red-600"
+                                            >
+                                                <Trash2 className="size-3.5" />
+                                            </button>
+                                        </span>
                                     </div>
                                 ))}
                             </div>
