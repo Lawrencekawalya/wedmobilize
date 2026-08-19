@@ -1,6 +1,7 @@
 import { Link } from '@inertiajs/react';
 import {
     BookOpen,
+    ContactRound,
     FolderGit2,
     LayoutGrid,
     MessageSquareText,
@@ -32,6 +33,7 @@ const mainNavItems: NavItem[] = [
         href: '/messages/single-bulk',
         icon: MessageSquareText,
     },
+    { title: 'Contacts', href: '/contacts', icon: ContactRound },
 ];
 
 const footerNavItems: NavItem[] = [

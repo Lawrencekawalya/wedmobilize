@@ -1,0 +1,188 @@
+import { Head, useForm } from '@inertiajs/react';
+import { ContactRound, FolderPlus, Upload } from 'lucide-react';
+
+type Group = { id: number; name: string; contacts_count: number };
+type Contact = {
+    id: number;
+    name: string | null;
+    phone: string;
+    email: string | null;
+    status: string;
+    groups: Group[];
+};
+
+export default function Contacts({
+    contacts,
+    groups,
+}: {
+    contacts: Contact[];
+    groups: Group[];
+}) {
+    const contact = useForm({
+        name: '',
+        phone: '',
+        email: '',
+        group_ids: [] as number[],
+    });
+    const group = useForm({ name: '', description: '' });
+
+    return (
+        <>
+            <Head title="Contacts" />
+            <div className="mx-auto w-full max-w-6xl p-4 sm:p-6 lg:p-8">
+                <p className="text-sm font-medium text-[#00a973]">
+                    Audience management
+                </p>
+                <h1 className="mt-1 text-3xl font-semibold text-[#172a45]">
+                    Contacts
+                </h1>
+                <p className="mt-2 text-[#5d7696]">
+                    Keep your guests organized in one clean, reusable list.
+                </p>
+                <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_320px]">
+                    <section className="rounded-3xl bg-white p-6 shadow-sm">
+                        <div className="flex items-center justify-between">
+                            <h2 className="text-xl font-semibold text-[#172a45]">
+                                All contacts
+                            </h2>
+                            <span className="rounded-full bg-emerald-50 px-3 py-1 text-sm text-[#177b63]">
+                                {contacts.length} total
+                            </span>
+                        </div>
+                        <div className="mt-5 overflow-x-auto">
+                            <table className="w-full text-left text-sm">
+                                <thead className="border-b text-[#7187a0]">
+                                    <tr>
+                                        <th className="pb-3">Contact</th>
+                                        <th className="pb-3">Phone</th>
+                                        <th className="pb-3">Groups</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {contacts.map((item) => (
+                                        <tr
+                                            key={item.id}
+                                            className="border-b border-slate-50"
+                                        >
+                                            <td className="py-4 font-medium text-[#172a45]">
+                                                {item.name || 'Unnamed contact'}
+                                                <span className="block font-normal text-[#7187a0]">
+                                                    {item.email}
+                                                </span>
+                                            </td>
+                                            <td className="py-4 text-[#5d7696]">
+                                                {item.phone}
+                                            </td>
+                                            <td className="py-4 text-[#5d7696]">
+                                                {item.groups
+                                                    .map((g) => g.name)
+                                                    .join(', ') || '—'}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                            {contacts.length === 0 && (
+                                <div className="py-12 text-center text-[#7187a0]">
+                                    <ContactRound className="mx-auto mb-3 size-8 text-[#00bf83]" />
+                                    No contacts yet. Add one or import a list to
+                                    get started.
+                                </div>
+                            )}
+                        </div>
+                    </section>
+                    <aside className="space-y-6">
+                        <form
+                            onSubmit={(e) => {
+                                e.preventDefault();
+                                contact.post('/contacts');
+                            }}
+                            className="rounded-3xl bg-white p-6 shadow-sm"
+                        >
+                            <h2 className="font-semibold text-[#172a45]">
+                                Add contact
+                            </h2>
+                            <div className="mt-4 grid gap-3">
+                                <input
+                                    placeholder="Name"
+                                    value={contact.data.name}
+                                    onChange={(e) =>
+                                        contact.setData('name', e.target.value)
+                                    }
+                                    className="rounded-xl border p-3"
+                                />
+                                <input
+                                    required
+                                    placeholder="Phone number"
+                                    value={contact.data.phone}
+                                    onChange={(e) =>
+                                        contact.setData('phone', e.target.value)
+                                    }
+                                    className="rounded-xl border p-3"
+                                />
+                                <input
+                                    placeholder="Email (optional)"
+                                    value={contact.data.email}
+                                    onChange={(e) =>
+                                        contact.setData('email', e.target.value)
+                                    }
+                                    className="rounded-xl border p-3"
+                                />
+                                <button className="rounded-xl bg-[#172a45] p-3 font-semibold text-white">
+                                    Save contact
+                                </button>
+                            </div>
+                        </form>
+                        <form
+                            onSubmit={(e) => {
+                                e.preventDefault();
+                                group.post('/contacts/groups');
+                            }}
+                            className="rounded-3xl bg-sky-50 p-6"
+                        >
+                            <h2 className="flex items-center gap-2 font-semibold text-[#172a45]">
+                                <FolderPlus className="size-4" />
+                                Create group
+                            </h2>
+                            <input
+                                required
+                                placeholder="e.g. Bride's family"
+                                value={group.data.name}
+                                onChange={(e) =>
+                                    group.setData('name', e.target.value)
+                                }
+                                className="mt-4 w-full rounded-xl border bg-white p-3"
+                            />
+                            <button className="mt-3 w-full rounded-xl bg-[#00bf83] p-3 font-semibold text-white">
+                                Create group
+                            </button>
+                            <div className="mt-5 space-y-2 text-sm text-[#5d7696]">
+                                {groups.map((item) => (
+                                    <div
+                                        key={item.id}
+                                        className="flex justify-between"
+                                    >
+                                        <span>{item.name}</span>
+                                        <span>{item.contacts_count}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </form>
+                        <div className="rounded-3xl border border-dashed border-sky-200 p-6 text-sm text-[#5d7696]">
+                            <Upload className="mb-3 size-5 text-[#00bf83]" />
+                            <strong className="block text-[#172a45]">
+                                Import contacts
+                            </strong>
+                            <p className="mt-1">
+                                CSV/XLSX mapping and preview is the next import
+                                step.
+                            </p>
+                        </div>
+                    </aside>
+                </div>
+            </div>
+        </>
+    );
+}
+
+Contacts.layout = { breadcrumbs: [{ title: 'Contacts', href: '/contacts' }] };
