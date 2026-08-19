@@ -32,6 +32,20 @@ export default function Contacts({
             router.put(`/contacts/groups/${item.id}`, { name: name.trim() });
         }
     };
+    const editContact = (item: Contact) => {
+        const name = window.prompt('Contact name', item.name ?? '');
+        const phone = window.prompt('Phone number', item.phone);
+        const email = window.prompt('Email', item.email ?? '');
+
+        if (phone?.trim()) {
+            router.put(`/contacts/${item.id}`, {
+                name: name ?? '',
+                phone: phone.trim(),
+                email: email ?? '',
+                group_ids: item.groups.map((group) => group.id),
+            });
+        }
+    };
 
     return (
         <>
@@ -63,6 +77,7 @@ export default function Contacts({
                                         <th className="pb-3">Contact</th>
                                         <th className="pb-3">Phone</th>
                                         <th className="pb-3">Groups</th>
+                                        <th className="pb-3" />
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -79,6 +94,36 @@ export default function Contacts({
                                             </td>
                                             <td className="py-4 text-[#5d7696]">
                                                 {item.phone}
+                                            </td>
+                                            <td className="py-4">
+                                                <span className="flex justify-end gap-1">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            editContact(item)
+                                                        }
+                                                        className="p-1 text-sky-700"
+                                                    >
+                                                        <Pencil className="size-4" />
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            if (
+                                                                window.confirm(
+                                                                    `Delete ${item.name || item.phone}?`,
+                                                                )
+                                                            ) {
+                                                                router.delete(
+                                                                    `/contacts/${item.id}`,
+                                                                );
+                                                            }
+                                                        }}
+                                                        className="p-1 text-red-600"
+                                                    >
+                                                        <Trash2 className="size-4" />
+                                                    </button>
+                                                </span>
                                             </td>
                                             <td className="py-4 text-[#5d7696]">
                                                 {item.groups

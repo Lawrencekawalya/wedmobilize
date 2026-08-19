@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Contact;
 use App\Models\ContactGroup;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -34,6 +35,24 @@ class ContactController extends Controller
         $request->user()->contactGroups()->create($data);
 
         return back()->with('success', 'Group created.');
+    }
+
+    public function update(Request $request, Contact $contact): RedirectResponse
+    {
+        abort_unless($contact->user_id === $request->user()->id, 404);
+        $data = $request->validate(['name' => ['nullable', 'string', 'max:255'], 'phone' => ['required', 'string', 'max:30'], 'email' => ['nullable', 'email', 'max:255'], 'group_ids' => ['array'], 'group_ids.*' => ['integer']]);
+        $contact->update(['name' => $data['name'] ?? null, 'phone' => preg_replace('/\D+/', '', $data['phone']), 'email' => $data['email'] ?? null]);
+        $contact->groups()->sync(ContactGroup::where('user_id', $request->user()->id)->whereIn('id', $data['group_ids'] ?? [])->pluck('id'));
+
+        return back()->with('success', 'Contact updated.');
+    }
+
+    public function destroy(Request $request, Contact $contact): RedirectResponse
+    {
+        abort_unless($contact->user_id === $request->user()->id, 404);
+        $contact->delete();
+
+        return back()->with('success', 'Contact deleted.');
     }
 
     public function updateGroup(Request $request, ContactGroup $group): RedirectResponse

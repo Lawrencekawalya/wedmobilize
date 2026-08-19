@@ -9,6 +9,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::inertia('dashboard', 'dashboard')->name('dashboard');
     Route::get('contacts', [ContactController::class, 'index'])->name('contacts.index');
     Route::post('contacts', [ContactController::class, 'store'])->name('contacts.store');
+    Route::put('contacts/{contact}', [ContactController::class, 'update'])->name('contacts.update');
+    Route::delete('contacts/{contact}', [ContactController::class, 'destroy'])->name('contacts.destroy');
     Route::post('contacts/groups', [ContactController::class, 'storeGroup'])->name('contacts.groups.store');
     Route::put('contacts/groups/{group}', [ContactController::class, 'updateGroup'])->name('contacts.groups.update');
     Route::delete('contacts/groups/{group}', [ContactController::class, 'destroyGroup'])->name('contacts.groups.destroy');
