@@ -135,6 +135,50 @@ export default function Contacts({
                                     }
                                     className="rounded-xl border p-3"
                                 />
+                                {groups.length > 0 && (
+                                    <fieldset className="rounded-xl border border-sky-100 p-3">
+                                        <legend className="px-1 text-xs font-medium text-[#5d7696]">
+                                            Add to groups
+                                        </legend>
+                                        <div className="mt-1 grid gap-2">
+                                            {groups.map((item) => (
+                                                <label
+                                                    key={item.id}
+                                                    className="flex items-center gap-2 text-sm text-[#466582]"
+                                                >
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={contact.data.group_ids.includes(
+                                                            item.id,
+                                                        )}
+                                                        onChange={(event) =>
+                                                            contact.setData(
+                                                                'group_ids',
+                                                                event.target
+                                                                    .checked
+                                                                    ? [
+                                                                          ...contact
+                                                                              .data
+                                                                              .group_ids,
+                                                                          item.id,
+                                                                      ]
+                                                                    : contact.data.group_ids.filter(
+                                                                          (
+                                                                              id,
+                                                                          ) =>
+                                                                              id !==
+                                                                              item.id,
+                                                                      ),
+                                                            )
+                                                        }
+                                                        className="size-4 accent-[#00bf83]"
+                                                    />
+                                                    {item.name}
+                                                </label>
+                                            ))}
+                                        </div>
+                                    </fieldset>
+                                )}
                                 <button className="rounded-xl bg-[#172a45] p-3 font-semibold text-white">
                                     Save contact
                                 </button>
