@@ -1,4 +1,4 @@
-import { Head, router, useForm } from '@inertiajs/react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
 import { ContactRound, FolderPlus, Pencil, Trash2, Upload } from 'lucide-react';
 
 type Group = { id: number; name: string; contacts_count: number };
@@ -305,7 +305,10 @@ export default function Contacts({
                                 ))}
                             </div>
                         </form>
-                        <div className="rounded-3xl border border-dashed border-sky-200 p-6 text-sm text-[#5d7696]">
+                        <Link
+                            href="/contacts/import"
+                            className="block rounded-3xl border border-dashed border-sky-200 p-6 text-sm text-[#5d7696]"
+                        >
                             <Upload className="mb-3 size-5 text-[#00bf83]" />
                             <strong className="block text-[#172a45]">
                                 Import contacts
@@ -314,7 +317,7 @@ export default function Contacts({
                                 CSV/XLSX mapping and preview is the next import
                                 step.
                             </p>
-                        </div>
+                        </Link>
                     </aside>
                 </div>
             </div>
