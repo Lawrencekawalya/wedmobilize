@@ -1,12 +1,6 @@
-import {
-    Check,
-    ChevronDown,
-    Search,
-    UserRound,
-    UsersRound,
-    X,
-} from 'lucide-react';
+import { Check, Search, UserRound, UsersRound, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
 export type RecipientContact = {
@@ -28,11 +22,13 @@ export type RecipientSelection = {
 };
 
 export function RecipientPicker({
+    mode,
     contacts,
     groups,
     value,
     onChange,
 }: {
+    mode: 'contacts' | 'groups';
     contacts: RecipientContact[];
     groups: RecipientGroup[];
     value: RecipientSelection[];
@@ -86,6 +82,8 @@ export function RecipientPicker({
         } else {
             onChange([...value, selection]);
         }
+
+        setSearch('');
     };
     const remove = (selection: RecipientSelection) =>
         onChange(
@@ -97,25 +95,25 @@ export function RecipientPicker({
 
     return (
         <div ref={container} className="relative">
-            <button
-                type="button"
-                aria-expanded={open}
-                aria-haspopup="listbox"
-                onClick={() => setOpen((current) => !current)}
-                className="flex min-h-12 w-full items-center justify-between gap-3 rounded-xl border border-sky-100 bg-white px-4 py-3 text-left text-sm text-[#466582] transition outline-none hover:border-sky-200 focus:border-[#00bf83] focus:ring-2 focus:ring-emerald-100"
-            >
-                <span>
-                    {value.length > 0
-                        ? `${value.length} ${value.length === 1 ? 'selection' : 'selections'}`
-                        : 'Search contacts or groups'}
-                </span>
-                <ChevronDown
-                    className={cn(
-                        'size-4 shrink-0 transition-transform',
-                        open && 'rotate-180',
-                    )}
+            <label className="flex min-h-12 items-center gap-3 rounded-xl border border-sky-100 bg-white px-4 transition focus-within:border-[#00bf83] focus-within:ring-2 focus-within:ring-emerald-100">
+                <Search className="size-4 shrink-0 text-[#8498ad]" />
+                <input
+                    value={search}
+                    onFocus={() => setOpen(true)}
+                    onChange={(event) => {
+                        setSearch(event.target.value);
+                        setOpen(true);
+                    }}
+                    placeholder={
+                        mode === 'groups'
+                            ? 'Type to search contact groups'
+                            : 'Type a name or phone number'
+                    }
+                    aria-expanded={open}
+                    aria-haspopup="listbox"
+                    className="h-11 w-full bg-transparent text-sm text-[#172a45] outline-none placeholder:text-[#9baec2]"
                 />
-            </button>
+            </label>
 
             {value.length > 0 && (
                 <div className="mt-3 flex flex-wrap gap-2">
@@ -175,26 +173,12 @@ export function RecipientPicker({
 
             {open && (
                 <div className="absolute z-30 mt-2 w-full overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-xl shadow-slate-300/40">
-                    <div className="border-b border-slate-100 p-3">
-                        <label className="flex items-center gap-2 rounded-xl bg-slate-50 px-3">
-                            <Search className="size-4 shrink-0 text-[#8498ad]" />
-                            <input
-                                autoFocus
-                                value={search}
-                                onChange={(event) =>
-                                    setSearch(event.target.value)
-                                }
-                                placeholder="Search by name or phone"
-                                className="h-10 w-full bg-transparent text-sm text-[#172a45] outline-none placeholder:text-[#9baec2]"
-                            />
-                        </label>
-                    </div>
                     <div
                         role="listbox"
                         aria-multiselectable="true"
                         className="max-h-72 overflow-y-auto p-2"
                     >
-                        {filteredGroups.length > 0 && (
+                        {mode === 'groups' && filteredGroups.length > 0 && (
                             <OptionSection label="Groups">
                                 {filteredGroups.map((group) => (
                                     <PickerOption
@@ -213,7 +197,7 @@ export function RecipientPicker({
                                 ))}
                             </OptionSection>
                         )}
-                        {filteredContacts.length > 0 && (
+                        {mode === 'contacts' && filteredContacts.length > 0 && (
                             <OptionSection label="Individual contacts">
                                 {filteredContacts.map((contact) => (
                                     <PickerOption
@@ -237,12 +221,14 @@ export function RecipientPicker({
                                 ))}
                             </OptionSection>
                         )}
-                        {filteredGroups.length === 0 &&
-                            filteredContacts.length === 0 && (
-                                <div className="px-4 py-8 text-center text-sm text-[#7187a0]">
-                                    No contacts or groups match “{search}”.
-                                </div>
-                            )}
+                        {((mode === 'groups' && filteredGroups.length === 0) ||
+                            (mode === 'contacts' &&
+                                filteredContacts.length === 0)) && (
+                            <div className="px-4 py-8 text-center text-sm text-[#7187a0]">
+                                No {mode === 'groups' ? 'groups' : 'contacts'}{' '}
+                                match “{search}”.
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
@@ -255,7 +241,7 @@ function OptionSection({
     children,
 }: {
     label: string;
-    children: React.ReactNode;
+    children: ReactNode;
 }) {
     return (
         <div className="mb-2 last:mb-0">

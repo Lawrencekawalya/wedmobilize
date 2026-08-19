@@ -9,6 +9,8 @@ import {
     MessageCircleMore,
     Send,
     Sparkles,
+    UserRound,
+    UsersRound,
 } from 'lucide-react';
 import { EmptyState } from '@/components/app/empty-state';
 import { PageHeader } from '@/components/app/page-header';
@@ -20,6 +22,13 @@ import type {
 } from '@/components/app/recipient-picker';
 import { SurfaceCard } from '@/components/app/surface-card';
 import { Button } from '@/components/ui/button';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 
 const sections = [
     {
@@ -82,6 +91,8 @@ type MessageCenterProps = {
     contacts?: RecipientContact[];
     groups?: RecipientGroup[];
 };
+
+type RecipientMode = 'all' | 'groups' | 'contacts';
 
 export default function MessageCenter({
     section = 'single-bulk',
@@ -148,9 +159,16 @@ function Composer({
     contacts: RecipientContact[];
     groups: RecipientGroup[];
 }) {
+    const [recipientMode, setRecipientMode] = useState<RecipientMode | null>(
+        null,
+    );
     const [recipients, setRecipients] = useState<RecipientSelection[]>([]);
     const [message, setMessage] = useState('');
     const recipientCount = useMemo(() => {
+        if (recipientMode === 'all') {
+            return contacts.length;
+        }
+
         const ids = new Set<number>();
 
         recipients.forEach((recipient) => {
@@ -164,7 +182,7 @@ function Composer({
         });
 
         return ids.size;
-    }, [groups, recipients]);
+    }, [contacts.length, groups, recipientMode, recipients]);
     const smsCount = Math.max(1, Math.ceil(message.length / 160));
 
     return (
@@ -188,19 +206,92 @@ function Composer({
             <div className="mt-8 grid gap-6">
                 <div className="grid gap-2 text-sm font-medium text-[#172a45]">
                     <span>Recipients</span>
-                    {contacts.length > 0 || groups.length > 0 ? (
+                    <Select
+                        value={recipientMode ?? undefined}
+                        onValueChange={(value) => {
+                            setRecipientMode(value as RecipientMode);
+                            setRecipients([]);
+                        }}
+                    >
+                        <SelectTrigger className="h-12 w-full rounded-xl border-sky-100 px-4 text-[#466582] focus:border-[#00bf83] focus:ring-2 focus:ring-emerald-100">
+                            <SelectValue placeholder="Choose how you want to select recipients" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl border-slate-100">
+                            <SelectItem value="all" className="py-3">
+                                <UsersRound className="size-4 text-[#00a973]" />
+                                All contacts
+                            </SelectItem>
+                            <SelectItem value="groups" className="py-3">
+                                <ContactRound className="size-4 text-[#00a973]" />
+                                Contact groups
+                            </SelectItem>
+                            <SelectItem value="contacts" className="py-3">
+                                <UserRound className="size-4 text-[#00a973]" />
+                                Select contacts
+                            </SelectItem>
+                        </SelectContent>
+                    </Select>
+
+                    {recipientMode === 'all' && (
+                        <div className="mt-2 flex items-center gap-3 rounded-2xl border border-emerald-100 bg-emerald-50/60 p-4">
+                            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white text-[#00a973] shadow-sm">
+                                <UsersRound className="size-5" />
+                            </span>
+                            <span>
+                                <span className="block font-semibold text-[#172a45]">
+                                    All active contacts selected
+                                </span>
+                                <span className="mt-0.5 block text-xs font-normal text-[#5d7696]">
+                                    {contacts.length}{' '}
+                                    {contacts.length === 1
+                                        ? 'contact will'
+                                        : 'contacts will'}{' '}
+                                    receive this message.
+                                </span>
+                            </span>
+                        </div>
+                    )}
+
+                    {recipientMode === 'groups' && groups.length > 0 && (
                         <RecipientPicker
+                            mode="groups"
                             contacts={contacts}
                             groups={groups}
                             value={recipients}
                             onChange={setRecipients}
                         />
-                    ) : (
+                    )}
+
+                    {recipientMode === 'contacts' && contacts.length > 0 && (
+                        <RecipientPicker
+                            mode="contacts"
+                            contacts={contacts}
+                            groups={groups}
+                            value={recipients}
+                            onChange={setRecipients}
+                        />
+                    )}
+
+                    {((recipientMode === 'groups' && groups.length === 0) ||
+                        (recipientMode === 'contacts' &&
+                            contacts.length === 0)) && (
                         <div className="rounded-2xl border border-dashed border-sky-200 bg-sky-50/40">
                             <EmptyState
-                                icon={ContactRound}
-                                title="Your contact list is empty"
-                                description="Add or import contacts before preparing a message."
+                                icon={
+                                    recipientMode === 'groups'
+                                        ? UsersRound
+                                        : ContactRound
+                                }
+                                title={
+                                    recipientMode === 'groups'
+                                        ? 'No contact groups yet'
+                                        : 'Your contact list is empty'
+                                }
+                                description={
+                                    recipientMode === 'groups'
+                                        ? 'Create a group and add contacts before selecting this option.'
+                                        : 'Add or import contacts before preparing a message.'
+                                }
                                 action={
                                     <Button
                                         asChild
@@ -214,13 +305,20 @@ function Composer({
                             />
                         </div>
                     )}
-                    {(contacts.length > 0 || groups.length > 0) && (
-                        <span className="text-xs font-normal text-[#7187a0]">
-                            {recipientCount > 0
-                                ? `${recipientCount} unique ${recipientCount === 1 ? 'contact' : 'contacts'} will receive this message.`
-                                : 'Select one or more saved groups or individual contacts.'}
-                        </span>
-                    )}
+
+                    {recipientMode !== null &&
+                        recipientMode !== 'all' &&
+                        ((recipientMode === 'groups' && groups.length > 0) ||
+                            (recipientMode === 'contacts' &&
+                                contacts.length > 0)) && (
+                            <span className="text-xs font-normal text-[#7187a0]">
+                                {recipientCount > 0
+                                    ? `${recipientCount} unique ${recipientCount === 1 ? 'contact' : 'contacts'} will receive this message.`
+                                    : recipientMode === 'groups'
+                                      ? 'Type a group name, then select one or more matching groups.'
+                                      : 'Type a contact name or phone number, then select one or more matches.'}
+                            </span>
+                        )}
                 </div>
                 <label className="grid gap-2 text-sm font-medium text-[#172a45]">
                     <span>Message</span>
