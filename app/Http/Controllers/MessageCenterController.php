@@ -22,20 +22,33 @@ class MessageCenterController extends Controller
     {
         abort_unless(in_array($section, self::SECTIONS, true), 404);
 
+        $contacts = $request->user()
+            ->contacts()
+            ->where('status', 'active')
+            ->whereNull('archived_at')
+            ->whereNull('opted_out_at')
+            ->orderBy('name')
+            ->orderBy('phone')
+            ->get(['id', 'name', 'phone']);
+        $eligibleContactIds = $contacts->pluck('id');
+        $groups = $request->user()
+            ->contactGroups()
+            ->with(['contacts' => fn ($query) => $query
+                ->whereIn('contacts.id', $eligibleContactIds)
+                ->select('contacts.id')])
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(fn ($group) => [
+                'id' => $group->id,
+                'name' => $group->name,
+                'contacts_count' => $group->contacts->count(),
+                'contact_ids' => $group->contacts->pluck('id')->values(),
+            ]);
+
         return Inertia::render('message-center/index', [
             'section' => $section,
-            'contacts' => $request->user()
-                ->contacts()
-                ->whereNull('archived_at')
-                ->whereNull('opted_out_at')
-                ->orderBy('name')
-                ->orderBy('phone')
-                ->get(['id', 'name', 'phone']),
-            'groups' => $request->user()
-                ->contactGroups()
-                ->withCount('contacts')
-                ->orderBy('name')
-                ->get(['id', 'name']),
+            'contacts' => $contacts,
+            'groups' => $groups,
         ]);
     }
 }

@@ -55,6 +55,8 @@ class ContactImportController extends Controller
             }
         }
 
-        return to_route('contacts.index')->with('success', 'Import completed.');
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Contacts imported successfully.']);
+
+        return to_route('contacts.index');
     }
 }

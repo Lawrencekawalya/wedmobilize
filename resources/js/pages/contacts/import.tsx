@@ -1,5 +1,8 @@
 import { Head, Link, useForm } from '@inertiajs/react';
-import { FileSpreadsheet, Upload } from 'lucide-react';
+import { ArrowLeft, FileSpreadsheet, LoaderCircle, Upload } from 'lucide-react';
+import { PageHeader } from '@/components/app/page-header';
+import { SurfaceCard } from '@/components/app/surface-card';
+import { Button } from '@/components/ui/button';
 
 export default function ContactImport() {
     const form = useForm<{ file: File | null }>({ file: null });
@@ -7,78 +10,91 @@ export default function ContactImport() {
     return (
         <>
             <Head title="Import contacts" />
-            <div className="mx-auto max-w-3xl p-6">
-                <Link href="/contacts" className="text-sm text-[#177b63]">
-                    ← Back to contacts
-                </Link>
-                <h1 className="mt-4 text-3xl font-semibold text-[#172a45]">
-                    Import contacts
-                </h1>
-                <p className="mt-2 text-[#5d7696]">
-                    Upload a CSV or Excel file. Nothing is saved until you
-                    review the preview.
-                </p>
-                <section className="mt-5 overflow-hidden rounded-2xl border border-sky-100 bg-sky-50/50">
-                    <div className="border-b border-sky-100 px-4 py-3">
-                        <p className="text-sm font-semibold text-[#172a45]">
-                            Format your spreadsheet like this
-                        </p>
-                        <p className="mt-1 text-xs text-[#5d7696]">
-                            <code className="font-medium">phone</code> is
-                            required. Use the international format without
-                            spaces, for example 256777071434.
-                        </p>
-                    </div>
-                    <div className="overflow-x-auto bg-white">
-                        <table className="w-full text-left text-sm">
-                            <thead className="bg-sky-50 text-[#466582]">
-                                <tr>
-                                    <th className="px-4 py-2.5 font-semibold">
-                                        name
-                                    </th>
-                                    <th className="px-4 py-2.5 font-semibold">
-                                        phone *
-                                    </th>
-                                    <th className="px-4 py-2.5 font-semibold">
-                                        email
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody className="text-[#5d7696]">
-                                <tr className="border-t border-slate-100">
-                                    <td className="px-4 py-2.5">
-                                        Sarah Namusoke
-                                    </td>
-                                    <td className="px-4 py-2.5">
-                                        256777071434
-                                    </td>
-                                    <td className="px-4 py-2.5">
-                                        sarah@example.com
-                                    </td>
-                                </tr>
-                                <tr className="border-t border-slate-100">
-                                    <td className="px-4 py-2.5">
-                                        Peter Okello
-                                    </td>
-                                    <td className="px-4 py-2.5">
-                                        256700111222
-                                    </td>
-                                    <td className="px-4 py-2.5">
-                                        peter@example.com
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </section>
+            <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 p-4 sm:p-6 lg:p-8">
+                <PageHeader
+                    eyebrow="Audience management"
+                    title="Import contacts"
+                    description="Upload a CSV or Excel file. Nothing is saved until you review and confirm the preview."
+                    actions={
+                        <Button
+                            asChild
+                            variant="outline"
+                            className="h-11 rounded-xl"
+                        >
+                            <Link href="/contacts">
+                                <ArrowLeft className="size-4" />
+                                Back to contacts
+                            </Link>
+                        </Button>
+                    }
+                />
+                <SurfaceCard
+                    title="Prepare your spreadsheet"
+                    description="Use these exact column names so we can map your contacts correctly."
+                    contentClassName="p-0"
+                >
+                    <section className="overflow-hidden">
+                        <div className="border-b border-sky-100 px-4 py-3">
+                            <p className="text-sm font-semibold text-[#172a45]">
+                                Format your spreadsheet like this
+                            </p>
+                            <p className="mt-1 text-xs text-[#5d7696]">
+                                <code className="font-medium">phone</code> is
+                                required. Use the international format without
+                                spaces, for example 256777071434.
+                            </p>
+                        </div>
+                        <div className="overflow-x-auto bg-white">
+                            <table className="w-full text-left text-sm">
+                                <thead className="bg-sky-50 text-[#466582]">
+                                    <tr>
+                                        <th className="px-4 py-2.5 font-semibold">
+                                            name
+                                        </th>
+                                        <th className="px-4 py-2.5 font-semibold">
+                                            phone *
+                                        </th>
+                                        <th className="px-4 py-2.5 font-semibold">
+                                            email
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody className="text-[#5d7696]">
+                                    <tr className="border-t border-slate-100">
+                                        <td className="px-4 py-2.5">
+                                            Sarah Namusoke
+                                        </td>
+                                        <td className="px-4 py-2.5">
+                                            256777071434
+                                        </td>
+                                        <td className="px-4 py-2.5">
+                                            sarah@example.com
+                                        </td>
+                                    </tr>
+                                    <tr className="border-t border-slate-100">
+                                        <td className="px-4 py-2.5">
+                                            Peter Okello
+                                        </td>
+                                        <td className="px-4 py-2.5">
+                                            256700111222
+                                        </td>
+                                        <td className="px-4 py-2.5">
+                                            peter@example.com
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                </SurfaceCard>
                 <form
                     onSubmit={(e) => {
                         e.preventDefault();
                         form.post('/contacts/import/preview');
                     }}
-                    className="mt-8 rounded-3xl bg-white p-7 shadow-sm"
+                    className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm shadow-slate-200/60 sm:p-7"
                 >
-                    <label className="flex cursor-pointer flex-col items-center rounded-2xl border-2 border-dashed border-sky-200 p-10 text-center">
+                    <label className="flex cursor-pointer flex-col items-center rounded-2xl border-2 border-dashed border-sky-200 px-5 py-10 text-center transition hover:border-[#00bf83] hover:bg-emerald-50/30 sm:p-10">
                         <FileSpreadsheet className="size-10 text-[#00bf83]" />
                         <span className="mt-3 font-medium text-[#172a45]">
                             Choose CSV or XLSX file
@@ -99,22 +115,31 @@ export default function ContactImport() {
                         />
                     </label>
                     {form.data.file && (
-                        <p className="mt-3 text-sm text-[#177b63]">
-                            Selected: {form.data.file.name}
-                        </p>
+                        <div className="mt-4 flex items-center gap-3 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-[#177b63]">
+                            <FileSpreadsheet className="size-4 shrink-0" />
+                            <span className="min-w-0 truncate font-medium">
+                                {form.data.file.name}
+                            </span>
+                        </div>
                     )}
                     {form.errors.file && (
                         <p className="mt-3 text-sm text-red-600">
                             {form.errors.file}
                         </p>
                     )}
-                    <button
+                    <Button
                         disabled={!form.data.file || form.processing}
-                        className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[#172a45] px-5 py-3 font-semibold text-white disabled:opacity-50"
+                        className="mt-6 h-11 w-full rounded-xl bg-[#172a45] sm:w-auto"
                     >
-                        <Upload className="size-4" />
-                        Preview import
-                    </button>
+                        {form.processing ? (
+                            <LoaderCircle className="size-4 animate-spin" />
+                        ) : (
+                            <Upload className="size-4" />
+                        )}
+                        {form.processing
+                            ? 'Reading spreadsheet…'
+                            : 'Preview import'}
+                    </Button>
                 </form>
             </div>
         </>

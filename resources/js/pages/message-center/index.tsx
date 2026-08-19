@@ -1,7 +1,8 @@
 import { Head, Link } from '@inertiajs/react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
     CalendarClock,
+    ContactRound,
     FileText,
     Inbox,
     MailPlus,
@@ -9,6 +10,16 @@ import {
     Send,
     Sparkles,
 } from 'lucide-react';
+import { EmptyState } from '@/components/app/empty-state';
+import { PageHeader } from '@/components/app/page-header';
+import { RecipientPicker } from '@/components/app/recipient-picker';
+import type {
+    RecipientContact,
+    RecipientGroup,
+    RecipientSelection,
+} from '@/components/app/recipient-picker';
+import { SurfaceCard } from '@/components/app/surface-card';
+import { Button } from '@/components/ui/button';
 
 const sections = [
     {
@@ -66,22 +77,10 @@ const content = {
     },
 } as const;
 
-type Contact = {
-    id: number;
-    name: string | null;
-    phone: string;
-};
-
-type ContactGroup = {
-    id: number;
-    name: string;
-    contacts_count: number;
-};
-
 type MessageCenterProps = {
     section?: string;
-    contacts?: Contact[];
-    groups?: ContactGroup[];
+    contacts?: RecipientContact[];
+    groups?: RecipientGroup[];
 };
 
 export default function MessageCenter({
@@ -99,22 +98,15 @@ export default function MessageCenter({
         <>
             <Head title={`${active.label} | Message Center`} />
             <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 p-4 sm:p-6 lg:p-8">
-                <div>
-                    <p className="text-sm font-medium text-[#00a973]">
-                        Event communication
-                    </p>
-                    <h1 className="mt-1 text-3xl font-semibold tracking-tight text-[#172a45] sm:text-4xl">
-                        Message Center
-                    </h1>
-                    <p className="mt-2 text-[#5d7696]">
-                        Create, schedule, and track every message that keeps
-                        your guests informed.
-                    </p>
-                </div>
+                <PageHeader
+                    eyebrow="Event communication"
+                    title="Message Center"
+                    description="Create, schedule, and track every message that keeps your guests informed."
+                />
 
                 <div className="grid gap-6 lg:grid-cols-[240px_1fr]">
                     <nav
-                        className="rounded-3xl border border-slate-100 bg-white p-2 shadow-sm shadow-slate-200/70"
+                        className="flex gap-1 overflow-x-auto rounded-2xl border border-slate-100 bg-white p-2 shadow-sm shadow-slate-200/70 lg:block lg:rounded-3xl"
                         aria-label="Message Center sections"
                     >
                         {sections.map((item) => {
@@ -125,7 +117,7 @@ export default function MessageCenter({
                                 <Link
                                     key={item.key}
                                     href={item.href}
-                                    className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition ${isActive ? 'bg-[#00bf83] text-white shadow-lg shadow-emerald-500/20' : 'text-[#466582] hover:bg-sky-50 hover:text-[#172a45]'}`}
+                                    className={`flex shrink-0 items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium whitespace-nowrap transition lg:gap-3 lg:rounded-2xl lg:px-4 lg:py-3 ${isActive ? 'bg-[#00bf83] text-white shadow-lg shadow-emerald-500/20' : 'text-[#466582] hover:bg-sky-50 hover:text-[#172a45]'}`}
                                 >
                                     <Icon className="size-4" />
                                     {item.label}
@@ -153,22 +145,31 @@ function Composer({
     contacts,
     groups,
 }: {
-    contacts: Contact[];
-    groups: ContactGroup[];
+    contacts: RecipientContact[];
+    groups: RecipientGroup[];
 }) {
-    const [recipient, setRecipient] = useState('');
-    const selectedGroup = recipient.startsWith('group:')
-        ? groups.find((group) => group.id === Number(recipient.slice(6)))
-        : undefined;
-    const recipientCount = selectedGroup
-        ? selectedGroup.contacts_count
-        : recipient
-          ? 1
-          : 0;
+    const [recipients, setRecipients] = useState<RecipientSelection[]>([]);
+    const [message, setMessage] = useState('');
+    const recipientCount = useMemo(() => {
+        const ids = new Set<number>();
+
+        recipients.forEach((recipient) => {
+            if (recipient.type === 'contact') {
+                ids.add(recipient.id);
+            } else {
+                groups
+                    .find((group) => group.id === recipient.id)
+                    ?.contact_ids.forEach((id) => ids.add(id));
+            }
+        });
+
+        return ids.size;
+    }, [groups, recipients]);
+    const smsCount = Math.max(1, Math.ceil(message.length / 160));
 
     return (
-        <section className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm shadow-slate-200/70 sm:p-8">
-            <div className="flex items-start justify-between gap-4">
+        <SurfaceCard contentClassName="p-5 sm:p-8">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-6">
                 <div>
                     <p className="text-sm font-medium text-[#00a973]">
                         New message
@@ -185,77 +186,72 @@ function Composer({
                 </div>
             </div>
             <div className="mt-8 grid gap-6">
-                <label className="grid gap-2 text-sm font-medium text-[#172a45]">
+                <div className="grid gap-2 text-sm font-medium text-[#172a45]">
                     <span>Recipients</span>
-                    <select
-                        value={recipient}
-                        onChange={(event) => setRecipient(event.target.value)}
-                        className="h-11 rounded-xl border border-sky-100 bg-white px-3 text-sm text-[#5d7696] outline-none focus:border-[#00bf83] focus:ring-2 focus:ring-emerald-100"
-                    >
-                        <option value="">Choose contacts or a group</option>
-                        {groups.length > 0 && (
-                            <optgroup label="Contact groups">
-                                {groups.map((group) => (
-                                    <option
-                                        key={group.id}
-                                        value={`group:${group.id}`}
+                    {contacts.length > 0 || groups.length > 0 ? (
+                        <RecipientPicker
+                            contacts={contacts}
+                            groups={groups}
+                            value={recipients}
+                            onChange={setRecipients}
+                        />
+                    ) : (
+                        <div className="rounded-2xl border border-dashed border-sky-200 bg-sky-50/40">
+                            <EmptyState
+                                icon={ContactRound}
+                                title="Your contact list is empty"
+                                description="Add or import contacts before preparing a message."
+                                action={
+                                    <Button
+                                        asChild
+                                        className="rounded-xl bg-[#172a45]"
                                     >
-                                        {group.name} ({group.contacts_count}{' '}
-                                        {group.contacts_count === 1
-                                            ? 'contact'
-                                            : 'contacts'}
-                                        )
-                                    </option>
-                                ))}
-                            </optgroup>
-                        )}
-                        {contacts.length > 0 && (
-                            <optgroup label="Individual contacts">
-                                {contacts.map((contact) => (
-                                    <option
-                                        key={contact.id}
-                                        value={`contact:${contact.id}`}
-                                    >
-                                        {contact.name ?? 'Unnamed contact'} ·{' '}
-                                        {contact.phone}
-                                    </option>
-                                ))}
-                            </optgroup>
-                        )}
-                    </select>
-                    <span className="text-xs font-normal text-[#7187a0]">
-                        {recipient
-                            ? `${recipientCount} ${recipientCount === 1 ? 'contact' : 'contacts'} selected.`
-                            : 'Select a saved group or an individual contact.'}
-                    </span>
-                </label>
+                                        <Link href="/contacts">
+                                            Go to contacts
+                                        </Link>
+                                    </Button>
+                                }
+                            />
+                        </div>
+                    )}
+                    {(contacts.length > 0 || groups.length > 0) && (
+                        <span className="text-xs font-normal text-[#7187a0]">
+                            {recipientCount > 0
+                                ? `${recipientCount} unique ${recipientCount === 1 ? 'contact' : 'contacts'} will receive this message.`
+                                : 'Select one or more saved groups or individual contacts.'}
+                        </span>
+                    )}
+                </div>
                 <label className="grid gap-2 text-sm font-medium text-[#172a45]">
                     <span>Message</span>
                     <textarea
                         rows={6}
-                        maxLength={160}
+                        maxLength={480}
+                        value={message}
+                        onChange={(event) => setMessage(event.target.value)}
                         placeholder="Write a clear update for your guests..."
                         className="resize-none rounded-xl border border-sky-100 p-3 text-sm outline-none placeholder:text-[#9baec2] focus:border-[#00bf83] focus:ring-2 focus:ring-emerald-100"
                     />
                     <span className="text-right text-xs font-normal text-[#7187a0]">
-                        0 / 160 characters · 1 SMS
+                        {message.length} / 480 characters · {smsCount}{' '}
+                        {smsCount === 1 ? 'SMS' : 'SMS parts'}
                     </span>
                 </label>
                 <div className="flex flex-col-reverse gap-3 border-t border-slate-100 pt-6 sm:flex-row sm:items-center sm:justify-between">
                     <p className="text-sm text-[#7187a0]">
                         EgoSMS connection required before sending.
                     </p>
-                    <button
+                    <Button
                         type="button"
                         disabled
-                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#172a45] px-5 py-3 text-sm font-semibold text-white opacity-50"
+                        className="h-11 rounded-xl bg-[#172a45] px-5"
                     >
                         <Send className="size-4" />
                         Send message
-                    </button>
+                    </Button>
                 </div>
             </div>
-        </section>
+        </SurfaceCard>
     );
 }
 

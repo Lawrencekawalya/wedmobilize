@@ -26,7 +26,9 @@ class ContactController extends Controller
         $contact = $request->user()->contacts()->updateOrCreate(['phone' => $phone], ['name' => $data['name'] ?? null, 'email' => $data['email'] ?? null]);
         $contact->groups()->syncWithoutDetaching(ContactGroup::where('user_id', $request->user()->id)->whereIn('id', $data['group_ids'] ?? [])->pluck('id'));
 
-        return back()->with('success', 'Contact saved.');
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Contact saved.']);
+
+        return back();
     }
 
     public function storeGroup(Request $request): RedirectResponse
@@ -34,7 +36,9 @@ class ContactController extends Controller
         $data = $request->validate(['name' => ['required', 'string', 'max:255'], 'description' => ['nullable', 'string', 'max:500']]);
         $request->user()->contactGroups()->create($data);
 
-        return back()->with('success', 'Group created.');
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Contact group created.']);
+
+        return back();
     }
 
     public function update(Request $request, Contact $contact): RedirectResponse
@@ -44,7 +48,9 @@ class ContactController extends Controller
         $contact->update(['name' => $data['name'] ?? null, 'phone' => preg_replace('/\D+/', '', $data['phone']), 'email' => $data['email'] ?? null]);
         $contact->groups()->sync(ContactGroup::where('user_id', $request->user()->id)->whereIn('id', $data['group_ids'] ?? [])->pluck('id'));
 
-        return back()->with('success', 'Contact updated.');
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Contact updated.']);
+
+        return back();
     }
 
     public function destroy(Request $request, Contact $contact): RedirectResponse
@@ -52,7 +58,9 @@ class ContactController extends Controller
         abort_unless($contact->user_id === $request->user()->id, 404);
         $contact->delete();
 
-        return back()->with('success', 'Contact deleted.');
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Contact deleted.']);
+
+        return back();
     }
 
     public function updateGroup(Request $request, ContactGroup $group): RedirectResponse
@@ -61,7 +69,9 @@ class ContactController extends Controller
         $data = $request->validate(['name' => ['required', 'string', 'max:255'], 'description' => ['nullable', 'string', 'max:500']]);
         $group->update($data);
 
-        return back()->with('success', 'Group updated.');
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Contact group updated.']);
+
+        return back();
     }
 
     public function destroyGroup(Request $request, ContactGroup $group): RedirectResponse
@@ -69,6 +79,8 @@ class ContactController extends Controller
         abort_unless($group->user_id === $request->user()->id, 404);
         $group->delete();
 
-        return back()->with('success', 'Group deleted. Contacts were kept.');
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Group deleted. Contacts were kept.']);
+
+        return back();
     }
 }
