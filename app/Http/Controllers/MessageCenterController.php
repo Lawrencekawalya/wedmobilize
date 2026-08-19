@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\SendSmsRequest;
+use App\Services\Messaging\SendSmsService;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -45,10 +48,60 @@ class MessageCenterController extends Controller
                 'contact_ids' => $group->contacts->pluck('id')->values(),
             ]);
 
+        $messages = $section === 'outbox'
+            ? $request->user()->outboundMessages()
+                ->latest()
+                ->limit(50)
+                ->select([
+                    'id', 'body', 'recipient_mode', 'sender_id', 'status',
+                    'recipient_count', 'submitted_count', 'failed_count',
+                    'cost', 'error_message', 'submitted_at', 'created_at',
+                ])
+                ->withCount([
+                    'recipients as delivered_count' => fn ($query) => $query->where('status', 'delivered'),
+                    'recipients as delivery_failed_count' => fn ($query) => $query->where('status', 'delivery_failed'),
+                ])
+                ->get()
+            : [];
+
         return Inertia::render('message-center/index', [
             'section' => $section,
             'contacts' => $contacts,
             'groups' => $groups,
+            'messages' => $messages,
+            'smsConfigured' => collect(['endpoint', 'username', 'password', 'sender_id'])
+                ->every(fn (string $key) => filled(config("services.egosms.{$key}"))),
         ]);
+    }
+
+    public function send(SendSmsRequest $request, SendSmsService $service): RedirectResponse
+    {
+        $data = $request->validated();
+        $message = $service->send(
+            $request->user(),
+            $data['recipient_mode'],
+            $data['message'],
+            $data['group_ids'] ?? [],
+            $data['contact_ids'] ?? [],
+        );
+
+        if ($message->status === 'failed') {
+            Inertia::flash('toast', [
+                'type' => 'error',
+                'message' => 'EgoSMS did not accept the message. Review it in Outbox.',
+            ]);
+        } elseif ($message->status === 'partially_failed') {
+            Inertia::flash('toast', [
+                'type' => 'warning',
+                'message' => "{$message->submitted_count} messages submitted; {$message->failed_count} failed.",
+            ]);
+        } else {
+            Inertia::flash('toast', [
+                'type' => 'success',
+                'message' => "{$message->submitted_count} messages submitted to EgoSMS.",
+            ]);
+        }
+
+        return to_route('messages.show', ['section' => 'outbox']);
     }
 }

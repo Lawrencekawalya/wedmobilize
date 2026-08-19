@@ -1,7 +1,9 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, useForm } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
+import type { FormEvent } from 'react';
 import {
     CalendarClock,
+    CheckCircle2,
     ContactRound,
     FileText,
     Inbox,
@@ -11,6 +13,7 @@ import {
     Sparkles,
     UserRound,
     UsersRound,
+    XCircle,
 } from 'lucide-react';
 import { EmptyState } from '@/components/app/empty-state';
 import { PageHeader } from '@/components/app/page-header';
@@ -90,6 +93,25 @@ type MessageCenterProps = {
     section?: string;
     contacts?: RecipientContact[];
     groups?: RecipientGroup[];
+    messages?: OutboundMessage[];
+    smsConfigured?: boolean;
+};
+
+type OutboundMessage = {
+    id: number;
+    body: string;
+    recipient_mode: string;
+    sender_id: string;
+    status: 'processing' | 'submitted' | 'partially_failed' | 'failed';
+    recipient_count: number;
+    submitted_count: number;
+    failed_count: number;
+    delivered_count: number;
+    delivery_failed_count: number;
+    cost: number | null;
+    error_message: string | null;
+    submitted_at: string | null;
+    created_at: string;
 };
 
 type RecipientMode = 'all' | 'groups' | 'contacts';
@@ -98,6 +120,8 @@ export default function MessageCenter({
     section = 'single-bulk',
     contacts = [],
     groups = [],
+    messages = [],
+    smsConfigured = false,
 }: MessageCenterProps) {
     const active = sections.find((item) => item.key === section) ?? sections[0];
     const isComposer = active.key === 'single-bulk';
@@ -138,7 +162,13 @@ export default function MessageCenter({
                     </nav>
 
                     {isComposer ? (
-                        <Composer contacts={contacts} groups={groups} />
+                        <Composer
+                            contacts={contacts}
+                            groups={groups}
+                            smsConfigured={smsConfigured}
+                        />
+                    ) : active.key === 'outbox' ? (
+                        <Outbox messages={messages} />
                     ) : (
                         <EmptySection
                             title={pageContent?.title ?? active.label}
@@ -155,15 +185,22 @@ export default function MessageCenter({
 function Composer({
     contacts,
     groups,
+    smsConfigured,
 }: {
     contacts: RecipientContact[];
     groups: RecipientGroup[];
+    smsConfigured: boolean;
 }) {
     const [recipientMode, setRecipientMode] = useState<RecipientMode | null>(
         null,
     );
     const [recipients, setRecipients] = useState<RecipientSelection[]>([]);
-    const [message, setMessage] = useState('');
+    const form = useForm({
+        recipient_mode: '' as RecipientMode | '',
+        group_ids: [] as number[],
+        contact_ids: [] as number[],
+        message: '',
+    });
     const recipientCount = useMemo(() => {
         if (recipientMode === 'all') {
             return contacts.length;
@@ -183,7 +220,35 @@ function Composer({
 
         return ids.size;
     }, [contacts.length, groups, recipientMode, recipients]);
-    const smsCount = Math.max(1, Math.ceil(message.length / 160));
+    const smsCount = Math.max(1, Math.ceil(form.data.message.length / 160));
+    const canSend =
+        smsConfigured &&
+        recipientMode !== null &&
+        recipientCount > 0 &&
+        form.data.message.trim().length > 0 &&
+        !form.processing;
+
+    function submit(event: FormEvent<HTMLFormElement>) {
+        event.preventDefault();
+
+        if (recipientMode === null) {
+            return;
+        }
+
+        form.transform((data) => ({
+            ...data,
+            recipient_mode: recipientMode,
+            group_ids:
+                recipientMode === 'groups'
+                    ? recipients.map((recipient) => recipient.id)
+                    : [],
+            contact_ids:
+                recipientMode === 'contacts'
+                    ? recipients.map((recipient) => recipient.id)
+                    : [],
+        }));
+        form.post('/messages/send', { preserveScroll: true });
+    }
 
     return (
         <SurfaceCard contentClassName="p-5 sm:p-8">
@@ -203,7 +268,7 @@ function Composer({
                     <Send className="size-5" />
                 </div>
             </div>
-            <div className="mt-8 grid gap-6">
+            <form className="mt-8 grid gap-6" onSubmit={submit}>
                 <div className="grid gap-2 text-sm font-medium text-[#172a45]">
                     <span>Recipients</span>
                     <Select
@@ -211,6 +276,7 @@ function Composer({
                         onValueChange={(value) => {
                             setRecipientMode(value as RecipientMode);
                             setRecipients([]);
+                            form.clearErrors();
                         }}
                     >
                         <SelectTrigger className="h-12 w-full rounded-xl border-sky-100 px-4 text-[#466582] focus:border-[#00bf83] focus:ring-2 focus:ring-emerald-100">
@@ -319,35 +385,146 @@ function Composer({
                                       : 'Type a contact name or phone number, then select one or more matches.'}
                             </span>
                         )}
+                    {(form.errors.recipient_mode ||
+                        form.errors.group_ids ||
+                        form.errors.contact_ids) && (
+                        <span className="text-xs font-normal text-red-600">
+                            {form.errors.recipient_mode ??
+                                form.errors.group_ids ??
+                                form.errors.contact_ids}
+                        </span>
+                    )}
                 </div>
                 <label className="grid gap-2 text-sm font-medium text-[#172a45]">
                     <span>Message</span>
                     <textarea
                         rows={6}
                         maxLength={480}
-                        value={message}
-                        onChange={(event) => setMessage(event.target.value)}
+                        value={form.data.message}
+                        onChange={(event) =>
+                            form.setData('message', event.target.value)
+                        }
                         placeholder="Write a clear update for your guests..."
                         className="resize-none rounded-xl border border-sky-100 p-3 text-sm outline-none placeholder:text-[#9baec2] focus:border-[#00bf83] focus:ring-2 focus:ring-emerald-100"
                     />
                     <span className="text-right text-xs font-normal text-[#7187a0]">
-                        {message.length} / 480 characters · {smsCount}{' '}
+                        {form.data.message.length} / 480 characters · {smsCount}{' '}
                         {smsCount === 1 ? 'SMS' : 'SMS parts'}
                     </span>
+                    {form.errors.message && (
+                        <span className="text-xs font-normal text-red-600">
+                            {form.errors.message}
+                        </span>
+                    )}
                 </label>
                 <div className="flex flex-col-reverse gap-3 border-t border-slate-100 pt-6 sm:flex-row sm:items-center sm:justify-between">
                     <p className="text-sm text-[#7187a0]">
-                        EgoSMS connection required before sending.
+                        {smsConfigured
+                            ? `${recipientCount} ${recipientCount === 1 ? 'recipient' : 'recipients'} selected. Delivery updates will appear in Outbox.`
+                            : 'EgoSMS credentials and sender ID must be configured before sending.'}
                     </p>
                     <Button
-                        type="button"
-                        disabled
+                        type="submit"
+                        disabled={!canSend}
                         className="h-11 rounded-xl bg-[#172a45] px-5"
                     >
                         <Send className="size-4" />
-                        Send message
+                        {form.processing ? 'Submitting…' : 'Send message'}
                     </Button>
                 </div>
+            </form>
+        </SurfaceCard>
+    );
+}
+
+function Outbox({ messages }: { messages: OutboundMessage[] }) {
+    if (messages.length === 0) {
+        return (
+            <section className="rounded-3xl border border-slate-100 bg-white shadow-sm shadow-slate-200/70">
+                <EmptyState
+                    icon={Send}
+                    title="No messages sent yet"
+                    description="Messages submitted to EgoSMS and their delivery progress will appear here."
+                    action={
+                        <Button asChild className="rounded-xl bg-[#172a45]">
+                            <Link href="/messages/single-bulk">
+                                Create a message
+                            </Link>
+                        </Button>
+                    }
+                />
+            </section>
+        );
+    }
+
+    return (
+        <SurfaceCard contentClassName="p-5 sm:p-7">
+            <div className="border-b border-slate-100 pb-5">
+                <p className="text-sm font-medium text-[#00a973]">
+                    EgoSMS activity
+                </p>
+                <h2 className="mt-1 text-2xl font-semibold text-[#172a45]">
+                    Outbox
+                </h2>
+                <p className="mt-2 text-sm text-[#5d7696]">
+                    Submitted messages and the latest delivery progress.
+                </p>
+            </div>
+            <div className="divide-y divide-slate-100">
+                {messages.map((message) => {
+                    const failed = message.status === 'failed';
+                    const partial = message.status === 'partially_failed';
+
+                    return (
+                        <article
+                            key={message.id}
+                            className="grid gap-3 py-5 sm:grid-cols-[1fr_auto] sm:items-start"
+                        >
+                            <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                    {failed ? (
+                                        <XCircle className="size-4 text-red-500" />
+                                    ) : (
+                                        <CheckCircle2
+                                            className={`size-4 ${partial ? 'text-amber-500' : 'text-[#00a973]'}`}
+                                        />
+                                    )}
+                                    <span className="text-sm font-semibold text-[#172a45] capitalize">
+                                        {message.status.replace('_', ' ')}
+                                    </span>
+                                </div>
+                                <p className="mt-2 line-clamp-2 text-sm leading-6 text-[#466582]">
+                                    {message.body}
+                                </p>
+                                {message.error_message && (
+                                    <p className="mt-2 text-xs text-red-600">
+                                        {message.error_message}
+                                    </p>
+                                )}
+                            </div>
+                            <div className="text-left text-xs text-[#7187a0] sm:text-right">
+                                <p>
+                                    {message.submitted_count} submitted ·{' '}
+                                    {message.failed_count} failed
+                                </p>
+                                {(message.delivered_count > 0 ||
+                                    message.delivery_failed_count > 0) && (
+                                    <p className="mt-1">
+                                        {message.delivered_count} delivered ·{' '}
+                                        {message.delivery_failed_count} delivery
+                                        failed
+                                    </p>
+                                )}
+                                <p className="mt-1">
+                                    {new Intl.DateTimeFormat(undefined, {
+                                        dateStyle: 'medium',
+                                        timeStyle: 'short',
+                                    }).format(new Date(message.created_at))}
+                                </p>
+                            </div>
+                        </article>
+                    );
+                })}
             </div>
         </SurfaceCard>
     );

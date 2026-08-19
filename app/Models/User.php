@@ -45,6 +45,12 @@ class User extends Authenticatable
         return $this->hasMany(ContactGroup::class);
     }
 
+    /** @return HasMany<OutboundMessage, $this> */
+    public function outboundMessages(): HasMany
+    {
+        return $this->hasMany(OutboundMessage::class);
+    }
+
     /**
      * Get the attributes that should be cast.
      *

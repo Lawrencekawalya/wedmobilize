@@ -35,4 +35,14 @@ return [
         ],
     ],
 
+    'egosms' => [
+        'endpoint' => env('EGOSMS_ENDPOINT', 'https://comms.egosms.co/api/v1/json/'),
+        'username' => env('EGOSMS_USERNAME'),
+        'password' => env('EGOSMS_PASSWORD'),
+        'sender_id' => env('EGOSMS_SENDER_ID'),
+        'priority' => env('EGOSMS_PRIORITY', '0'),
+        'batch_size' => (int) env('EGOSMS_BATCH_SIZE', 500),
+        'webhook_token' => env('EGOSMS_WEBHOOK_TOKEN'),
+    ],
+
 ];
