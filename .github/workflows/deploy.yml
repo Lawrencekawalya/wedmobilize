@@ -69,7 +69,7 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
           port: ${{ secrets.VPS_PORT }}
-          script_stop: true
+          command_timeout: 10m
           script: |
             set -e
             cd /var/www/wedmobilize
@@ -77,5 +77,21 @@ jobs:
             composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
             npm ci
             npm run build
+            test -s public/build/manifest.json
             php artisan migrate --force
             php artisan optimize
+
+      - name: Verify production health
+        env:
+          PRODUCTION_URL: https://wedmobilize.syntaxsystems.co
+        run: |
+          curl --fail --silent --show-error \
+            --retry 6 --retry-delay 5 --retry-all-errors \
+            --connect-timeout 10 --max-time 20 \
+            --output /dev/null --write-out "Laravel health: %{http_code}\n" \
+            "$PRODUCTION_URL/up"
+          curl --fail --silent --show-error \
+            --retry 6 --retry-delay 5 --retry-all-errors \
+            --connect-timeout 10 --max-time 20 \
+            --output /dev/null --write-out "Public website: %{http_code}\n" \
+            "$PRODUCTION_URL/"
