@@ -46,11 +46,11 @@ jobs:
       - name: Install JavaScript dependencies
         run: npm ci
 
+      - name: Generate route and action types
+        run: npm run build
+
       - name: Run quality checks and tests
         run: composer ci:check
-
-      - name: Build production frontend assets
-        run: npm run build
 
   deploy:
     name: Deploy to production
