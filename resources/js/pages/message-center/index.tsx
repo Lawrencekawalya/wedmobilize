@@ -1,4 +1,5 @@
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
+import { useState } from 'react';
 import {
     CalendarClock,
     FileText,
@@ -65,8 +66,29 @@ const content = {
     },
 } as const;
 
-export default function MessageCenter() {
-    const { section = 'single-bulk' } = usePage<{ section?: string }>().props;
+type Contact = {
+    id: number;
+    name: string | null;
+    phone: string;
+};
+
+type ContactGroup = {
+    id: number;
+    name: string;
+    contacts_count: number;
+};
+
+type MessageCenterProps = {
+    section?: string;
+    contacts?: Contact[];
+    groups?: ContactGroup[];
+};
+
+export default function MessageCenter({
+    section = 'single-bulk',
+    contacts = [],
+    groups = [],
+}: MessageCenterProps) {
     const active = sections.find((item) => item.key === section) ?? sections[0];
     const isComposer = active.key === 'single-bulk';
     const pageContent = !isComposer
@@ -113,7 +135,7 @@ export default function MessageCenter() {
                     </nav>
 
                     {isComposer ? (
-                        <Composer />
+                        <Composer contacts={contacts} groups={groups} />
                     ) : (
                         <EmptySection
                             title={pageContent?.title ?? active.label}
@@ -127,7 +149,23 @@ export default function MessageCenter() {
     );
 }
 
-function Composer() {
+function Composer({
+    contacts,
+    groups,
+}: {
+    contacts: Contact[];
+    groups: ContactGroup[];
+}) {
+    const [recipient, setRecipient] = useState('');
+    const selectedGroup = recipient.startsWith('group:')
+        ? groups.find((group) => group.id === Number(recipient.slice(6)))
+        : undefined;
+    const recipientCount = selectedGroup
+        ? selectedGroup.contacts_count
+        : recipient
+          ? 1
+          : 0;
+
     return (
         <section className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm shadow-slate-200/70 sm:p-8">
             <div className="flex items-start justify-between gap-4">
@@ -149,14 +187,46 @@ function Composer() {
             <div className="mt-8 grid gap-6">
                 <label className="grid gap-2 text-sm font-medium text-[#172a45]">
                     <span>Recipients</span>
-                    <select className="h-11 rounded-xl border border-sky-100 bg-white px-3 text-sm text-[#5d7696] outline-none focus:border-[#00bf83] focus:ring-2 focus:ring-emerald-100">
-                        <option>Choose contacts or a group</option>
-                        <option disabled>
-                            Contacts will appear here after setup
-                        </option>
+                    <select
+                        value={recipient}
+                        onChange={(event) => setRecipient(event.target.value)}
+                        className="h-11 rounded-xl border border-sky-100 bg-white px-3 text-sm text-[#5d7696] outline-none focus:border-[#00bf83] focus:ring-2 focus:ring-emerald-100"
+                    >
+                        <option value="">Choose contacts or a group</option>
+                        {groups.length > 0 && (
+                            <optgroup label="Contact groups">
+                                {groups.map((group) => (
+                                    <option
+                                        key={group.id}
+                                        value={`group:${group.id}`}
+                                    >
+                                        {group.name} ({group.contacts_count}{' '}
+                                        {group.contacts_count === 1
+                                            ? 'contact'
+                                            : 'contacts'}
+                                        )
+                                    </option>
+                                ))}
+                            </optgroup>
+                        )}
+                        {contacts.length > 0 && (
+                            <optgroup label="Individual contacts">
+                                {contacts.map((contact) => (
+                                    <option
+                                        key={contact.id}
+                                        value={`contact:${contact.id}`}
+                                    >
+                                        {contact.name ?? 'Unnamed contact'} ·{' '}
+                                        {contact.phone}
+                                    </option>
+                                ))}
+                            </optgroup>
+                        )}
                     </select>
                     <span className="text-xs font-normal text-[#7187a0]">
-                        Contacts are managed in the upcoming Contacts module.
+                        {recipient
+                            ? `${recipientCount} ${recipientCount === 1 ? 'contact' : 'contacts'} selected.`
+                            : 'Select a saved group or an individual contact.'}
                     </span>
                 </label>
                 <label className="grid gap-2 text-sm font-medium text-[#172a45]">
