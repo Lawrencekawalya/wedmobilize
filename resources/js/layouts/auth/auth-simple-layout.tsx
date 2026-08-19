@@ -1,5 +1,4 @@
 import { Link } from '@inertiajs/react';
-import AppLogoIcon from '@/components/app-logo-icon';
 import { home } from '@/routes';
 import type { AuthLayoutProps } from '@/types';
 
@@ -9,29 +8,36 @@ export default function AuthSimpleLayout({
     description,
 }: AuthLayoutProps) {
     return (
-        <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-background p-6 md:p-10">
-            <div className="w-full max-w-sm">
-                <div className="flex flex-col gap-8">
-                    <div className="flex flex-col items-center gap-4">
+        <div className="relative flex min-h-svh items-center justify-center overflow-hidden bg-[#f4fdff] p-5 text-[#172a45] sm:p-8">
+            <div className="absolute -top-32 -left-32 size-96 rounded-full bg-sky-200/35 blur-3xl" />
+            <div className="absolute -right-28 -bottom-28 size-96 rounded-full bg-emerald-200/35 blur-3xl" />
+            <div className="relative w-full max-w-md">
+                <div className="rounded-[2rem] border border-white/80 bg-white/85 p-6 shadow-2xl shadow-[#4e769a]/10 backdrop-blur sm:p-9">
+                    <div className="flex flex-col items-center gap-5">
                         <Link
                             href={home()}
-                            className="flex flex-col items-center gap-2 font-medium"
+                            className="text-xl font-semibold tracking-tight"
                         >
-                            <div className="mb-1 flex h-9 w-9 items-center justify-center rounded-md">
-                                <AppLogoIcon className="size-9 fill-current text-[var(--foreground)] dark:text-white" />
-                            </div>
-                            <span className="sr-only">{title}</span>
+                            Wed<span className="text-[#00bf83]">Mobilize</span>
                         </Link>
 
                         <div className="space-y-2 text-center">
-                            <h1 className="text-xl font-medium">{title}</h1>
-                            <p className="text-center text-sm text-muted-foreground">
+                            <p className="text-xs font-semibold tracking-[0.14em] text-[#00a973] uppercase">
+                                Event SMS hub
+                            </p>
+                            <h1 className="text-2xl font-semibold tracking-tight">
+                                {title}
+                            </h1>
+                            <p className="text-center text-sm leading-6 text-[#5d7696]">
                                 {description}
                             </p>
                         </div>
                     </div>
-                    {children}
+                    <div className="mt-8">{children}</div>
                 </div>
+                <p className="mt-5 text-center text-xs text-[#7187a0]">
+                    Organize your contacts. Send with confidence.
+                </p>
             </div>
         </div>
     );

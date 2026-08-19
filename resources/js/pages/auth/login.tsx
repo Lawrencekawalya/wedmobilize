@@ -29,7 +29,12 @@ export default function Login({ status, canResetPassword }: Props) {
                     <>
                         <div className="grid gap-6">
                             <div className="grid gap-2">
-                                <Label htmlFor="email">Email address</Label>
+                                <Label
+                                    htmlFor="email"
+                                    className="text-[#294564]"
+                                >
+                                    Email address
+                                </Label>
                                 <Input
                                     id="email"
                                     type="email"
@@ -39,17 +44,23 @@ export default function Login({ status, canResetPassword }: Props) {
                                     tabIndex={1}
                                     autoComplete="email"
                                     placeholder="email@example.com"
+                                    className="h-11 rounded-xl border-[#d7eaf0] bg-white focus-visible:border-[#00bf83] focus-visible:ring-[#00bf83]/20"
                                 />
                                 <InputError message={errors.email} />
                             </div>
 
                             <div className="grid gap-2">
                                 <div className="flex items-center">
-                                    <Label htmlFor="password">Password</Label>
+                                    <Label
+                                        htmlFor="password"
+                                        className="text-[#294564]"
+                                    >
+                                        Password
+                                    </Label>
                                     {canResetPassword && (
                                         <TextLink
                                             href={request()}
-                                            className="ml-auto text-sm"
+                                            className="ml-auto text-sm text-[#00a973] hover:text-[#008f62]"
                                             tabIndex={5}
                                         >
                                             Forgot your password?
@@ -63,11 +74,12 @@ export default function Login({ status, canResetPassword }: Props) {
                                     tabIndex={2}
                                     autoComplete="current-password"
                                     placeholder="Password"
+                                    className="h-11 rounded-xl border-[#d7eaf0] bg-white focus-visible:border-[#00bf83] focus-visible:ring-[#00bf83]/20"
                                 />
                                 <InputError message={errors.password} />
                             </div>
 
-                            <div className="flex items-center space-x-3">
+                            <div className="flex items-center space-x-3 text-[#5d7696]">
                                 <Checkbox
                                     id="remember"
                                     name="remember"
@@ -78,7 +90,7 @@ export default function Login({ status, canResetPassword }: Props) {
 
                             <Button
                                 type="submit"
-                                className="mt-4 w-full"
+                                className="mt-4 h-11 w-full rounded-xl bg-[#00bf83] text-base font-semibold shadow-lg shadow-emerald-500/20 hover:bg-[#00a973]"
                                 tabIndex={4}
                                 disabled={processing}
                                 data-test="login-button"
@@ -101,6 +113,6 @@ export default function Login({ status, canResetPassword }: Props) {
 }
 
 Login.layout = {
-    title: 'Log in to your account',
-    description: 'Enter your email and password below to log in',
+    title: 'Welcome back',
+    description: 'Log in to manage your events, contacts, and SMS campaigns.',
 };
