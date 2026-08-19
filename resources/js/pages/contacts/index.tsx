@@ -36,13 +36,24 @@ export default function Contacts({
         const name = window.prompt('Contact name', item.name ?? '');
         const phone = window.prompt('Phone number', item.phone);
         const email = window.prompt('Email', item.email ?? '');
+        const selectedGroups = window.prompt(
+            `Group IDs (comma separated): ${groups.map((group) => `${group.id}=${group.name}`).join(', ')}`,
+            item.groups.map((group) => group.id).join(','),
+        );
 
         if (phone?.trim()) {
             router.put(`/contacts/${item.id}`, {
                 name: name ?? '',
                 phone: phone.trim(),
                 email: email ?? '',
-                group_ids: item.groups.map((group) => group.id),
+                group_ids: (selectedGroups ?? '')
+                    .split(',')
+                    .map((id) => Number(id.trim()))
+                    .filter(
+                        (id) =>
+                            Number.isInteger(id) &&
+                            groups.some((group) => group.id === id),
+                    ),
             });
         }
     };
