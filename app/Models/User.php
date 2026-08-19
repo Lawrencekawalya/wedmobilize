@@ -33,11 +33,13 @@ class User extends Authenticatable
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable, TwoFactorAuthenticatable;
 
+    /** @return HasMany<Contact, $this> */
     public function contacts(): HasMany
     {
         return $this->hasMany(Contact::class);
     }
 
+    /** @return HasMany<ContactGroup, $this> */
     public function contactGroups(): HasMany
     {
         return $this->hasMany(ContactGroup::class);

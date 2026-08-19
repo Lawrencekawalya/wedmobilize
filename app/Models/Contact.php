@@ -15,11 +15,13 @@ class Contact extends Model
         return ['custom_fields' => 'array', 'opted_out_at' => 'datetime', 'archived_at' => 'datetime'];
     }
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
+    /** @return BelongsToMany<ContactGroup, $this> */
     public function groups(): BelongsToMany
     {
         return $this->belongsToMany(ContactGroup::class, 'contact_group_members')->withTimestamps();
