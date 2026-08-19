@@ -18,6 +18,59 @@ export default function ContactImport() {
                     Upload a CSV or Excel file. Nothing is saved until you
                     review the preview.
                 </p>
+                <section className="mt-5 overflow-hidden rounded-2xl border border-sky-100 bg-sky-50/50">
+                    <div className="border-b border-sky-100 px-4 py-3">
+                        <p className="text-sm font-semibold text-[#172a45]">
+                            Format your spreadsheet like this
+                        </p>
+                        <p className="mt-1 text-xs text-[#5d7696]">
+                            <code className="font-medium">phone</code> is
+                            required. Use the international format without
+                            spaces, for example 256777071434.
+                        </p>
+                    </div>
+                    <div className="overflow-x-auto bg-white">
+                        <table className="w-full text-left text-sm">
+                            <thead className="bg-sky-50 text-[#466582]">
+                                <tr>
+                                    <th className="px-4 py-2.5 font-semibold">
+                                        name
+                                    </th>
+                                    <th className="px-4 py-2.5 font-semibold">
+                                        phone *
+                                    </th>
+                                    <th className="px-4 py-2.5 font-semibold">
+                                        email
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody className="text-[#5d7696]">
+                                <tr className="border-t border-slate-100">
+                                    <td className="px-4 py-2.5">
+                                        Sarah Namusoke
+                                    </td>
+                                    <td className="px-4 py-2.5">
+                                        256777071434
+                                    </td>
+                                    <td className="px-4 py-2.5">
+                                        sarah@example.com
+                                    </td>
+                                </tr>
+                                <tr className="border-t border-slate-100">
+                                    <td className="px-4 py-2.5">
+                                        Peter Okello
+                                    </td>
+                                    <td className="px-4 py-2.5">
+                                        256700111222
+                                    </td>
+                                    <td className="px-4 py-2.5">
+                                        peter@example.com
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
                 <form
                     onSubmit={(e) => {
                         e.preventDefault();
