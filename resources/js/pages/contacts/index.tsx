@@ -29,8 +29,8 @@ export default function Contacts({
         const name = window.prompt('Group name', item.name);
 
         if (name?.trim()) {
-router.put(`/contacts/groups/${item.id}`, { name: name.trim() });
-}
+            router.put(`/contacts/groups/${item.id}`, { name: name.trim() });
+        }
     };
 
     return (
@@ -191,10 +191,10 @@ router.put(`/contacts/groups/${item.id}`, { name: name.trim() });
                                                             `Delete ${item.name}? Contacts will remain.`,
                                                         )
                                                     ) {
-router.delete(
+                                                        router.delete(
                                                             `/contacts/groups/${item.id}`,
                                                         );
-}
+                                                    }
                                                 }}
                                                 className="p-1 text-red-600"
                                             >
