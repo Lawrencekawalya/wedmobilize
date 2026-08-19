@@ -106,6 +106,7 @@ type OutboundMessage = {
     recipient_count: number;
     submitted_count: number;
     failed_count: number;
+    sent_count: number;
     delivered_count: number;
     delivery_failed_count: number;
     cost: number | null;
@@ -490,7 +491,9 @@ function Outbox({ messages }: { messages: OutboundMessage[] }) {
                                         />
                                     )}
                                     <span className="text-sm font-semibold text-[#172a45] capitalize">
-                                        {message.status.replace('_', ' ')}
+                                        {message.status === 'submitted'
+                                            ? 'Submitted to EgoSMS'
+                                            : message.status.replace('_', ' ')}
                                     </span>
                                 </div>
                                 <p className="mt-2 line-clamp-2 text-sm leading-6 text-[#466582]">
@@ -504,12 +507,14 @@ function Outbox({ messages }: { messages: OutboundMessage[] }) {
                             </div>
                             <div className="text-left text-xs text-[#7187a0] sm:text-right">
                                 <p>
-                                    {message.submitted_count} submitted ·{' '}
-                                    {message.failed_count} failed
+                                    {message.submitted_count} accepted ·{' '}
+                                    {message.failed_count} request failed
                                 </p>
-                                {(message.delivered_count > 0 ||
+                                {(message.sent_count > 0 ||
+                                    message.delivered_count > 0 ||
                                     message.delivery_failed_count > 0) && (
                                     <p className="mt-1">
+                                        {message.sent_count} sent ·{' '}
                                         {message.delivered_count} delivered ·{' '}
                                         {message.delivery_failed_count} delivery
                                         failed

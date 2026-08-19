@@ -21,7 +21,7 @@ class EgoSmsWebhookController extends Controller
 
         $phone = preg_replace('/\D+/', '', $data['number']);
         $providerStatus = trim($data['Status']);
-        $status = strcasecmp($providerStatus, 'Success') === 0 ? 'delivered' : 'delivery_failed';
+        $status = $this->mapStatus($providerStatus);
 
         $recipient = OutboundMessageRecipient::query()
             ->where('provider_reference', $data['MsgFollowUpUniqueCode'])
@@ -33,12 +33,28 @@ class EgoSmsWebhookController extends Controller
             return response()->json(['message' => 'Delivery report accepted.']);
         }
 
-        $recipient->update([
-            'status' => $status,
-            'provider_status' => $providerStatus,
-            'delivered_at' => $status === 'delivered' ? now() : null,
-        ]);
+        $updates = ['provider_status' => $providerStatus];
+
+        if ($status !== null && $recipient->status !== 'delivered') {
+            $updates['status'] = $status;
+            $updates['delivered_at'] = $status === 'delivered' ? now() : null;
+        }
+
+        $recipient->update($updates);
 
         return response()->json(['message' => 'Delivery report updated.']);
+    }
+
+    private function mapStatus(string $providerStatus): ?string
+    {
+        $normalized = strtolower((string) preg_replace('/[^a-z0-9]+/i', '', $providerStatus));
+
+        return match ($normalized) {
+            'success', 'delivered', 'delivrd' => 'delivered',
+            'sent', 'submitted', 'accepted', 'acceptd', 'enroute', 'queued' => 'sent',
+            'failed', 'failure', 'undelivered', 'undeliv', 'rejected', 'rejectd',
+            'expired', 'deleted', 'blocked', 'error' => 'delivery_failed',
+            default => null,
+        };
     }
 }

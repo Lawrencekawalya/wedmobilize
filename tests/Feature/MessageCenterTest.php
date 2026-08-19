@@ -196,6 +196,67 @@ class MessageCenterTest extends TestCase
         $this->assertNotNull($recipient->delivered_at);
     }
 
+    public function test_sent_webhook_status_is_not_misclassified_as_delivery_failure(): void
+    {
+        config()->set('services.egosms.webhook_token', 'delivery-secret');
+        $user = User::factory()->create();
+        $message = $user->outboundMessages()->create([
+            'body' => 'Hello.',
+            'recipient_mode' => 'all',
+            'sender_id' => 'WedMobilize',
+            'status' => 'submitted',
+            'recipient_count' => 1,
+            'submitted_count' => 1,
+        ]);
+        $recipient = $message->recipients()->create([
+            'name' => 'Sarah',
+            'phone' => '256777071434',
+            'status' => 'submitted',
+            'provider_reference' => 'ApiMSG.sent',
+        ]);
+
+        $this->postJson('/webhooks/egosms/delivery/delivery-secret', [
+            'MsgFollowUpUniqueCode' => 'ApiMSG.sent',
+            'number' => '+256777071434',
+            'Status' => 'Sent',
+        ])->assertOk();
+
+        $recipient->refresh();
+        $this->assertSame('sent', $recipient->status);
+        $this->assertSame('Sent', $recipient->provider_status);
+        $this->assertNull($recipient->delivered_at);
+    }
+
+    public function test_unknown_webhook_status_does_not_create_a_false_failure(): void
+    {
+        config()->set('services.egosms.webhook_token', 'delivery-secret');
+        $user = User::factory()->create();
+        $message = $user->outboundMessages()->create([
+            'body' => 'Hello.',
+            'recipient_mode' => 'all',
+            'sender_id' => 'WedMobilize',
+            'status' => 'submitted',
+            'recipient_count' => 1,
+            'submitted_count' => 1,
+        ]);
+        $recipient = $message->recipients()->create([
+            'name' => 'Sarah',
+            'phone' => '256777071434',
+            'status' => 'submitted',
+            'provider_reference' => 'ApiMSG.unknown',
+        ]);
+
+        $this->postJson('/webhooks/egosms/delivery/delivery-secret', [
+            'MsgFollowUpUniqueCode' => 'ApiMSG.unknown',
+            'number' => '+256777071434',
+            'Status' => 'ProviderSpecificStatus',
+        ])->assertOk();
+
+        $recipient->refresh();
+        $this->assertSame('submitted', $recipient->status);
+        $this->assertSame('ProviderSpecificStatus', $recipient->provider_status);
+    }
+
     private function configureEgoSms(): void
     {
         config()->set('services.egosms', [

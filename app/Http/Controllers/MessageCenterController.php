@@ -58,6 +58,7 @@ class MessageCenterController extends Controller
                     'cost', 'error_message', 'submitted_at', 'created_at',
                 ])
                 ->withCount([
+                    'recipients as sent_count' => fn ($query) => $query->where('status', 'sent'),
                     'recipients as delivered_count' => fn ($query) => $query->where('status', 'delivered'),
                     'recipients as delivery_failed_count' => fn ($query) => $query->where('status', 'delivery_failed'),
                 ])
