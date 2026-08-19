@@ -81,7 +81,10 @@ export default [
                         'sibling',
                         'index',
                     ],
-                    alphabetize: { order: 'asc', caseInsensitive: true },
+                    // Type-only imports are ordered differently by supported
+                    // eslint-plugin-import releases. Keep import groups while
+                    // leaving same-group ordering to the formatter.
+                    alphabetize: { order: 'ignore' },
                 },
             ],
             'import/consistent-type-specifier-style': [
