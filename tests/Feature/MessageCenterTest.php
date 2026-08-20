@@ -196,7 +196,7 @@ class MessageCenterTest extends TestCase
         $this->assertNotNull($recipient->delivered_at);
     }
 
-    public function test_sent_webhook_status_is_not_misclassified_as_delivery_failure(): void
+    public function test_sent_webhook_status_is_counted_as_delivered_under_the_egosms_contract(): void
     {
         config()->set('services.egosms.webhook_token', 'delivery-secret');
         $user = User::factory()->create();
@@ -222,8 +222,46 @@ class MessageCenterTest extends TestCase
         ])->assertOk();
 
         $recipient->refresh();
-        $this->assertSame('sent', $recipient->status);
+        $this->assertSame('delivered', $recipient->status);
         $this->assertSame('Sent', $recipient->provider_status);
+        $this->assertNotNull($recipient->delivered_at);
+
+        $this->actingAs($user)->get('/messages/outbox')->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->where('messages.0.sent_count', 0)
+            ->where('messages.0.delivered_count', 1)
+            ->where('messages.0.delivery_failed_count', 0));
+        $this->get(route('dashboard'))->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->where('summary.delivered', 1)
+            ->where('summary.delivery_failed', 0)
+            ->where('summary.delivery_rate', 100));
+    }
+
+    public function test_pending_provider_status_does_not_create_a_false_delivery(): void
+    {
+        config()->set('services.egosms.webhook_token', 'delivery-secret');
+        $user = User::factory()->create();
+        $message = $user->outboundMessages()->create([
+            'body' => 'Hello.',
+            'recipient_mode' => 'all',
+            'sender_id' => 'WedMobilize',
+            'status' => 'submitted',
+            'recipient_count' => 1,
+            'submitted_count' => 1,
+        ]);
+        $recipient = $message->recipients()->create([
+            'phone' => '256777071434',
+            'status' => 'submitted',
+            'provider_reference' => 'ApiMSG.pending',
+        ]);
+
+        $this->postJson('/webhooks/egosms/delivery/delivery-secret', [
+            'MsgFollowUpUniqueCode' => 'ApiMSG.pending',
+            'number' => '+256777071434',
+            'Status' => 'Accepted',
+        ])->assertOk();
+
+        $recipient->refresh();
+        $this->assertSame('submitted', $recipient->status);
         $this->assertNull($recipient->delivered_at);
     }
 

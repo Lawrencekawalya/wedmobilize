@@ -50,8 +50,9 @@ class EgoSmsWebhookController extends Controller
         $normalized = strtolower((string) preg_replace('/[^a-z0-9]+/i', '', $providerStatus));
 
         return match ($normalized) {
-            'success', 'delivered', 'delivrd' => 'delivered',
-            'sent', 'submitted', 'accepted', 'acceptd', 'enroute', 'queued' => 'sent',
+            // EgoSMS defines Sent as its successful delivery outcome.
+            'success', 'delivered', 'delivrd', 'sent' => 'delivered',
+            'submitted', 'accepted', 'acceptd', 'enroute', 'queued' => 'submitted',
             'failed', 'failure', 'undelivered', 'undeliv', 'rejected', 'rejectd',
             'expired', 'deleted', 'blocked', 'error' => 'delivery_failed',
             default => null,
