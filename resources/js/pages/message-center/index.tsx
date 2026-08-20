@@ -509,17 +509,63 @@ function Composer({
                         />
                     )}
                     {recipientMode === 'file' && (
-                        <input
-                            type="file"
-                            accept=".csv,.xlsx"
-                            onChange={(event) =>
-                                form.setData(
-                                    'recipient_file',
-                                    event.target.files?.[0] ?? null,
-                                )
-                            }
-                            className="rounded-xl border border-dashed border-sky-200 p-4 font-normal"
-                        />
+                        <>
+                            <section className="mt-2 overflow-hidden rounded-2xl border border-sky-100 bg-white font-normal">
+                                <div className="border-b border-sky-100 px-4 py-3">
+                                    <p className="font-semibold text-[#172a45]">
+                                        Organise your spreadsheet like this
+                                    </p>
+                                    <p className="mt-1 text-xs leading-5 text-[#5d7696]">
+                                        Use these column names in the first row.
+                                        Phone is required and should use
+                                        international format without spaces.
+                                    </p>
+                                </div>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full min-w-96 text-left text-sm">
+                                        <thead className="bg-sky-50 text-[#466582]">
+                                            <tr>
+                                                <th className="px-4 py-2.5 font-semibold">
+                                                    name
+                                                </th>
+                                                <th className="px-4 py-2.5 font-semibold">
+                                                    phone *
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="text-[#5d7696]">
+                                            <tr className="border-t border-slate-100">
+                                                <td className="px-4 py-2.5">
+                                                    Sarah Namusoke
+                                                </td>
+                                                <td className="px-4 py-2.5">
+                                                    256777071434
+                                                </td>
+                                            </tr>
+                                            <tr className="border-t border-slate-100">
+                                                <td className="px-4 py-2.5">
+                                                    Peter Okello
+                                                </td>
+                                                <td className="px-4 py-2.5">
+                                                    256700111222
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </section>
+                            <input
+                                type="file"
+                                accept=".csv,.xlsx"
+                                onChange={(event) =>
+                                    form.setData(
+                                        'recipient_file',
+                                        event.target.files?.[0] ?? null,
+                                    )
+                                }
+                                className="rounded-xl border border-dashed border-sky-200 p-4 font-normal"
+                            />
+                        </>
                     )}
                     {recipientMode === 'campaign' && (
                         <Select
