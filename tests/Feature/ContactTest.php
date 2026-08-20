@@ -11,12 +11,12 @@ class ContactTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_contact_management_page_only_loads_a_five_contact_preview(): void
+    public function test_contact_management_page_only_loads_a_ten_contact_preview(): void
     {
         $user = User::factory()->create();
         $otherUser = User::factory()->create();
 
-        foreach (range(1, 7) as $index) {
+        foreach (range(1, 12) as $index) {
             $user->contacts()->create([
                 'name' => "Contact {$index}",
                 'phone' => '256700'.str_pad((string) $index, 6, '0', STR_PAD_LEFT),
@@ -32,8 +32,8 @@ class ContactTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('contacts/index')
-                ->where('contactsTotal', 7)
-                ->has('contacts', 5));
+                ->where('contactsTotal', 12)
+                ->has('contacts', 10));
     }
 
     public function test_complete_contact_list_is_paginated_at_sixty_contacts(): void
