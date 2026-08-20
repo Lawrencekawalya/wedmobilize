@@ -15,6 +15,7 @@ Route::post('webhooks/egosms/delivery/{token}', [EgoSmsWebhookController::class,
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
     Route::get('contacts', [ContactController::class, 'index'])->name('contacts.index');
+    Route::get('contacts/all', [ContactController::class, 'list'])->name('contacts.list');
     Route::post('contacts', [ContactController::class, 'store'])->name('contacts.store');
     Route::put('contacts/{contact}', [ContactController::class, 'update'])->name('contacts.update');
     Route::delete('contacts/{contact}', [ContactController::class, 'destroy'])->name('contacts.destroy');

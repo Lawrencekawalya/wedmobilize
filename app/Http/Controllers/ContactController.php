@@ -13,10 +13,35 @@ class ContactController extends Controller
 {
     public function index(Request $request): Response
     {
-        $contacts = $request->user()->contacts()->with('groups:id,name')->latest()->get();
+        $contactsQuery = $request->user()->contacts();
+        $contactsTotal = (clone $contactsQuery)->count();
+        $contacts = $contactsQuery->with('groups:id,name')->latest()->limit(5)->get();
         $groups = $request->user()->contactGroups()->withCount('contacts')->orderBy('name')->get();
 
-        return Inertia::render('contacts/index', compact('contacts', 'groups'));
+        return Inertia::render('contacts/index', compact('contacts', 'contactsTotal', 'groups'));
+    }
+
+    public function list(Request $request): Response
+    {
+        $search = trim((string) $request->query('search', ''));
+        $contacts = $request->user()->contacts()
+            ->with('groups:id,name')
+            ->when($search !== '', fn ($query) => $query->where(function ($query) use ($search) {
+                $query->where('name', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhereHas('groups', fn ($query) => $query->where('name', 'like', "%{$search}%"));
+            }))
+            ->latest()
+            ->paginate(60)
+            ->withQueryString();
+        $groups = $request->user()->contactGroups()->orderBy('name')->get(['id', 'name']);
+
+        return Inertia::render('contacts/list', [
+            'contacts' => $contacts,
+            'groups' => $groups,
+            'filters' => ['search' => $search],
+        ]);
     }
 
     public function store(Request $request): RedirectResponse

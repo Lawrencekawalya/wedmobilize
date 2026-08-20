@@ -1,5 +1,6 @@
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import {
+    ArrowRight,
     ContactRound,
     FolderPlus,
     LoaderCircle,
@@ -9,7 +10,7 @@ import {
     Upload,
     UsersRound,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { ConfirmDialog } from '@/components/app/confirm-dialog';
 import { EmptyState } from '@/components/app/empty-state';
@@ -53,12 +54,13 @@ type ContactForm = {
 
 export default function Contacts({
     contacts,
+    contactsTotal,
     groups,
 }: {
     contacts: Contact[];
+    contactsTotal: number;
     groups: Group[];
 }) {
-    const [search, setSearch] = useState('');
     const [editingContact, setEditingContact] = useState<Contact | null>(null);
     const [deletingContact, setDeletingContact] = useState<Contact | null>(
         null,
@@ -83,20 +85,6 @@ export default function Contacts({
     });
     const group = useForm({ name: '', description: '' });
     const editGroup = useForm({ name: '', description: '' });
-
-    const filteredContacts = useMemo(() => {
-        const query = search.trim().toLowerCase();
-
-        if (!query) {
-            return contacts;
-        }
-
-        return contacts.filter((item) =>
-            `${item.name ?? ''} ${item.phone} ${item.email ?? ''} ${item.groups.map((itemGroup) => itemGroup.name).join(' ')}`
-                .toLowerCase()
-                .includes(query),
-        );
-    }, [contacts, search]);
 
     const openContactEditor = (item: Contact) => {
         editContact.clearErrors();
@@ -144,25 +132,42 @@ export default function Contacts({
                         title="All contacts"
                         description="Search, update, and organize your saved audience."
                         action={
-                            <span className="rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-[#177b63]">
-                                {contacts.length} total
-                            </span>
+                            <div className="flex items-center gap-2">
+                                <span className="rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-[#177b63]">
+                                    {contactsTotal} total
+                                </span>
+                                {contactsTotal > contacts.length && (
+                                    <Button
+                                        asChild
+                                        variant="outline"
+                                        size="sm"
+                                        className="rounded-xl border-sky-100 text-[#172a45]"
+                                    >
+                                        <Link href="/contacts/all">
+                                            <span className="sm:hidden">
+                                                See all
+                                            </span>
+                                            <span className="hidden sm:inline">
+                                                See all contacts
+                                            </span>
+                                            <ArrowRight className="size-3.5" />
+                                        </Link>
+                                    </Button>
+                                )}
+                            </div>
                         }
                         contentClassName="p-0"
                     >
                         {contacts.length > 0 && (
                             <div className="border-b border-slate-100 p-4 sm:px-6">
-                                <label className="flex items-center gap-3 rounded-xl border border-sky-100 bg-slate-50/60 px-3 transition focus-within:border-[#00bf83] focus-within:bg-white focus-within:ring-2 focus-within:ring-emerald-100">
+                                <Link
+                                    href="/contacts/all"
+                                    className="flex h-11 items-center gap-3 rounded-xl border border-sky-100 bg-slate-50/60 px-3 text-sm text-[#9baec2] transition hover:border-[#00bf83] hover:bg-white hover:text-[#5d7696] hover:ring-2 hover:ring-emerald-100"
+                                >
                                     <Search className="size-4 shrink-0 text-[#8498ad]" />
-                                    <input
-                                        value={search}
-                                        onChange={(event) =>
-                                            setSearch(event.target.value)
-                                        }
-                                        placeholder="Search by name, phone, email, or group"
-                                        className="h-11 w-full bg-transparent text-sm text-[#172a45] outline-none placeholder:text-[#9baec2]"
-                                    />
-                                </label>
+                                    Search all contacts by name, phone, email,
+                                    or group
+                                </Link>
                             </div>
                         )}
 
@@ -171,22 +176,6 @@ export default function Contacts({
                                 icon={ContactRound}
                                 title="No contacts yet"
                                 description="Add your first contact here or import an existing spreadsheet."
-                            />
-                        ) : filteredContacts.length === 0 ? (
-                            <EmptyState
-                                icon={Search}
-                                title="No matching contacts"
-                                description={`Nothing matches “${search}”. Try a name, phone number, email, or group.`}
-                                action={
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        className="rounded-xl"
-                                        onClick={() => setSearch('')}
-                                    >
-                                        Clear search
-                                    </Button>
-                                }
                             />
                         ) : (
                             <>
@@ -209,7 +198,7 @@ export default function Contacts({
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {filteredContacts.map((item) => (
+                                            {contacts.map((item) => (
                                                 <ContactTableRow
                                                     key={item.id}
                                                     contact={item}
@@ -225,7 +214,7 @@ export default function Contacts({
                                     </table>
                                 </div>
                                 <div className="divide-y divide-slate-100 md:hidden">
-                                    {filteredContacts.map((item) => (
+                                    {contacts.map((item) => (
                                         <ContactMobileCard
                                             key={item.id}
                                             contact={item}
