@@ -136,18 +136,18 @@ export default function Contacts({
                                 <span className="rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-[#177b63]">
                                     {contactsTotal} total
                                 </span>
-                                {contactsTotal > contacts.length && (
+                                {contactsTotal > 3 && (
                                     <Button
                                         asChild
                                         variant="outline"
                                         size="sm"
-                                        className="rounded-xl border-sky-100 text-[#172a45]"
+                                        className={`rounded-xl border-sky-100 text-[#172a45] ${contactsTotal <= contacts.length ? 'md:hidden' : ''}`}
                                     >
                                         <Link href="/contacts/all">
-                                            <span className="sm:hidden">
+                                            <span className="md:hidden">
                                                 See all
                                             </span>
-                                            <span className="hidden sm:inline">
+                                            <span className="hidden md:inline">
                                                 See all contacts
                                             </span>
                                             <ArrowRight className="size-3.5" />
@@ -214,7 +214,7 @@ export default function Contacts({
                                     </table>
                                 </div>
                                 <div className="divide-y divide-slate-100 md:hidden">
-                                    {contacts.map((item) => (
+                                    {contacts.slice(0, 3).map((item) => (
                                         <ContactMobileCard
                                             key={item.id}
                                             contact={item}
