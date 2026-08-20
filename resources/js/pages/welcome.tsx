@@ -5,6 +5,7 @@ import {
     MessageSquareText,
     Send,
 } from 'lucide-react';
+import AppLogoIcon from '@/components/app-logo-icon';
 import { dashboard, login } from '@/routes';
 
 export default function Welcome() {
@@ -19,8 +20,11 @@ export default function Welcome() {
                 <header className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-4 sm:px-6 sm:py-7">
                     <Link
                         href="/"
-                        className="shrink-0 text-lg font-semibold tracking-tight whitespace-nowrap sm:text-xl"
+                        className="flex shrink-0 items-center gap-2 text-lg font-semibold tracking-tight whitespace-nowrap sm:text-xl"
                     >
+                        <span className="flex size-9 items-center justify-center rounded-xl bg-[#172a45] text-white shadow-md shadow-slate-900/10">
+                            <AppLogoIcon className="size-7" />
+                        </span>
                         Wed<span className="text-[#00bf83]">Mobilize</span>
                     </Link>
 

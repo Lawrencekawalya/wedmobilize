@@ -1,5 +1,6 @@
 import { Link } from '@inertiajs/react';
 import type { ReactNode } from 'react';
+import AppLogoIcon from '@/components/app-logo-icon';
 
 export function LegalPage({
     eyebrow,
@@ -18,8 +19,11 @@ export function LegalPage({
                 <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-5 py-5 sm:px-8">
                     <Link
                         href="/"
-                        className="text-lg font-semibold tracking-tight whitespace-nowrap sm:text-xl"
+                        className="flex items-center gap-2 text-lg font-semibold tracking-tight whitespace-nowrap sm:text-xl"
                     >
+                        <span className="flex size-9 items-center justify-center rounded-xl bg-[#172a45] text-white">
+                            <AppLogoIcon className="size-7" />
+                        </span>
                         Wed<span className="text-[#00bf83]">Mobilize</span>
                     </Link>
                     <Link
