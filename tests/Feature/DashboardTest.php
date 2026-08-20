@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -60,6 +62,42 @@ class DashboardTest extends TestCase
             ->where('summary.delivery_rate', 50)
             ->where('summary.campaigns', 1)
             ->has('recentMessages', 2)
-            ->where('recentMessages.0.body', 'Scheduled update'));
+            ->where('recentMessages.0.body', 'Scheduled update')
+            ->has('analytics.daily', 7)
+            ->has('analytics.monthly', 12)
+            ->where('analytics.networks.0.name', 'MTN Uganda')
+            ->where('analytics.networks.0.recipients', 1)
+            ->where('analytics.networks.1.name', 'Airtel Uganda')
+            ->where('analytics.networks.1.recipients', 1)
+            ->where('analytics.spending.units', 2)
+            ->where('analytics.spending.estimated_cost', 70)
+            ->where('analytics.contact_health.missing_name', 1)
+            ->where('analytics.contact_health.without_group', 1)
+            ->has('analytics.upcoming', 1));
+    }
+
+    public function test_dashboard_estimates_remaining_local_sms_from_the_live_balance_and_configured_rate(): void
+    {
+        config()->set('services.egosms', [
+            'endpoint' => 'https://egosms.test/api',
+            'username' => 'lawrence',
+            'password' => 'secret',
+            'sender_id' => 'WedMobilize',
+            'local_sms_rate' => 35,
+        ]);
+        Cache::forget('egosms.balance');
+        Http::fake([
+            'https://egosms.test/api' => Http::response([
+                'Status' => 'OK',
+                'Balance' => 4965,
+            ]),
+        ]);
+
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->get(route('dashboard'))->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->where('sms.balance', 4965)
+            ->where('sms.local_rate', 35)
+            ->where('sms.estimated_remaining', 141));
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\OutboundMessageRecipient;
+use App\Services\Dashboard\DashboardAnalytics;
 use App\Services\EgoSms\EgoSmsClient;
 use App\Services\EgoSms\EgoSmsException;
 use Illuminate\Http\Request;
@@ -12,7 +13,7 @@ use Inertia\Response;
 
 class DashboardController extends Controller
 {
-    public function __invoke(Request $request, EgoSmsClient $egoSms): Response
+    public function __invoke(Request $request, EgoSmsClient $egoSms, DashboardAnalytics $analytics): Response
     {
         $user = $request->user();
         $messages = $user->outboundMessages();
@@ -36,6 +37,7 @@ class DashboardController extends Controller
         $delivered = (int) ($deliveryStats?->getAttribute('delivered') ?? 0);
         $deliveryFailed = (int) ($deliveryStats?->getAttribute('delivery_failed') ?? 0);
         $finalDeliveryReports = $delivered + $deliveryFailed;
+        $localSmsRate = max(0, (float) config('services.egosms.local_sms_rate', 35));
 
         return Inertia::render('dashboard', [
             'summary' => [
@@ -60,7 +62,12 @@ class DashboardController extends Controller
                 'configured' => $smsConfigured,
                 'balance' => $balance,
                 'sender_id' => config('services.egosms.sender_id'),
+                'local_rate' => $localSmsRate,
+                'estimated_remaining' => $balance !== null && $localSmsRate > 0
+                    ? (int) floor($balance / $localSmsRate)
+                    : null,
             ],
+            'analytics' => $analytics->for($user),
         ]);
     }
 }

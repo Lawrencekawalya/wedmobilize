@@ -43,6 +43,7 @@ return [
         'priority' => env('EGOSMS_PRIORITY', '0'),
         'batch_size' => (int) env('EGOSMS_BATCH_SIZE', 500),
         'webhook_token' => env('EGOSMS_WEBHOOK_TOKEN'),
+        'local_sms_rate' => (float) env('EGOSMS_LOCAL_SMS_RATE', 35),
     ],
 
 ];
