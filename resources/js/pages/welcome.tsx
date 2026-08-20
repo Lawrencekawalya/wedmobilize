@@ -73,6 +73,23 @@ export default function Welcome() {
                                 See how it works
                             </a>
                         </div>
+                        <p className="mt-4 max-w-xl text-xs leading-5 text-[#7187a0]">
+                            By using WedMobilize, you agree to our{' '}
+                            <Link
+                                href="/terms"
+                                className="font-medium text-[#3e608a] underline decoration-sky-200 underline-offset-2 hover:text-[#00a973]"
+                            >
+                                Terms
+                            </Link>{' '}
+                            and{' '}
+                            <Link
+                                href="/acceptable-use"
+                                className="font-medium text-[#3e608a] underline decoration-sky-200 underline-offset-2 hover:text-[#00a973]"
+                            >
+                                Acceptable Use Policy
+                            </Link>
+                            .
+                        </p>
                     </div>
 
                     <div
@@ -125,8 +142,36 @@ export default function Welcome() {
                     </div>
                 </section>
 
-                <footer className="border-t border-[#dceff3] px-6 py-6 text-center text-sm text-[#69819b]">
-                    WedMobilize · Better event communication through SMS.
+                <footer className="border-t border-[#dceff3] px-6 py-6 text-sm text-[#69819b]">
+                    <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 sm:flex-row">
+                        <span>
+                            WedMobilize · Better event communication through
+                            SMS.
+                        </span>
+                        <nav
+                            aria-label="Legal"
+                            className="flex flex-wrap justify-center gap-x-5 gap-y-2"
+                        >
+                            <Link
+                                href="/terms"
+                                className="hover:text-[#00a973]"
+                            >
+                                Terms
+                            </Link>
+                            <Link
+                                href="/privacy"
+                                className="hover:text-[#00a973]"
+                            >
+                                Privacy
+                            </Link>
+                            <Link
+                                href="/acceptable-use"
+                                className="hover:text-[#00a973]"
+                            >
+                                Acceptable use
+                            </Link>
+                        </nav>
+                    </div>
                 </footer>
             </main>
         </>

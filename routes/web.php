@@ -9,6 +9,9 @@ use App\Http\Controllers\MessageTemplateController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'welcome')->name('home');
+Route::inertia('terms', 'legal/terms')->name('terms');
+Route::inertia('privacy', 'legal/privacy')->name('privacy');
+Route::inertia('acceptable-use', 'legal/acceptable-use')->name('acceptable-use');
 Route::post('webhooks/egosms/delivery/{token}', [EgoSmsWebhookController::class, 'delivery'])
     ->name('webhooks.egosms.delivery');
 
