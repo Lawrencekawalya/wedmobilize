@@ -17,8 +17,15 @@ class ContactController extends Controller
         $contactsTotal = (clone $contactsQuery)->count();
         $contacts = $contactsQuery->with('groups:id,name')->latest()->limit(13)->get();
         $groups = $request->user()->contactGroups()->withCount('contacts')->orderBy('name')->get();
+        $groupsTotal = $groups->count();
+        $featuredGroup = $request->user()->contactGroups()
+            ->withCount('contacts')
+            ->orderByDesc('contacts_count')
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->first();
 
-        return Inertia::render('contacts/index', compact('contacts', 'contactsTotal', 'groups'));
+        return Inertia::render('contacts/index', compact('contacts', 'contactsTotal', 'groups', 'groupsTotal', 'featuredGroup'));
     }
 
     public function list(Request $request): Response
@@ -39,6 +46,26 @@ class ContactController extends Controller
 
         return Inertia::render('contacts/list', [
             'contacts' => $contacts,
+            'groups' => $groups,
+            'filters' => ['search' => $search],
+        ]);
+    }
+
+    public function groups(Request $request): Response
+    {
+        $search = trim((string) $request->query('search', ''));
+        $groups = $request->user()->contactGroups()
+            ->withCount('contacts')
+            ->when($search !== '', fn ($query) => $query->where(function ($query) use ($search) {
+                $query->where('name', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%");
+            }))
+            ->orderByDesc('contacts_count')
+            ->latest()
+            ->paginate(60)
+            ->withQueryString();
+
+        return Inertia::render('contacts/groups', [
             'groups' => $groups,
             'filters' => ['search' => $search],
         ]);

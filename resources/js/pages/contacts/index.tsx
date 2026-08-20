@@ -56,10 +56,14 @@ export default function Contacts({
     contacts,
     contactsTotal,
     groups,
+    groupsTotal,
+    featuredGroup,
 }: {
     contacts: Contact[];
     contactsTotal: number;
     groups: Group[];
+    groupsTotal: number;
+    featuredGroup: Group | null;
 }) {
     const [editingContact, setEditingContact] = useState<Contact | null>(null);
     const [deletingContact, setDeletingContact] = useState<Contact | null>(
@@ -312,50 +316,64 @@ export default function Contacts({
                                 </Button>
                             </form>
 
-                            <div className="mt-5 space-y-2 border-t border-slate-100 pt-5">
-                                {groups.length === 0 ? (
+                            <div className="mt-5 space-y-3 border-t border-slate-100 pt-5">
+                                {featuredGroup === null ? (
                                     <p className="rounded-xl bg-slate-50 px-3 py-4 text-center text-sm text-[#7187a0]">
                                         Your groups will appear here.
                                     </p>
                                 ) : (
-                                    groups.map((item) => (
-                                        <div
-                                            key={item.id}
-                                            className="flex items-center gap-3 rounded-xl border border-slate-100 px-3 py-2.5"
-                                        >
+                                    <>
+                                        <div className="flex items-center gap-3 rounded-xl border border-slate-100 px-3 py-2.5">
                                             <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-sky-50 text-[#466582]">
                                                 <UsersRound className="size-4" />
                                             </span>
                                             <span className="min-w-0 flex-1">
                                                 <span className="block truncate text-sm font-medium text-[#172a45]">
-                                                    {item.name}
+                                                    {featuredGroup.name}
                                                 </span>
                                                 <span className="text-xs text-[#7187a0]">
-                                                    {item.contacts_count}{' '}
-                                                    {item.contacts_count === 1
+                                                    {
+                                                        featuredGroup.contacts_count
+                                                    }{' '}
+                                                    {featuredGroup.contacts_count ===
+                                                    1
                                                         ? 'contact'
                                                         : 'contacts'}
                                                 </span>
                                             </span>
                                             <IconButton
-                                                label={`Edit ${item.name}`}
+                                                label={`Edit ${featuredGroup.name}`}
                                                 onClick={() =>
-                                                    openGroupEditor(item)
+                                                    openGroupEditor(
+                                                        featuredGroup,
+                                                    )
                                                 }
                                             >
                                                 <Pencil className="size-3.5" />
                                             </IconButton>
                                             <IconButton
-                                                label={`Delete ${item.name}`}
+                                                label={`Delete ${featuredGroup.name}`}
                                                 destructive
                                                 onClick={() =>
-                                                    setDeletingGroup(item)
+                                                    setDeletingGroup(
+                                                        featuredGroup,
+                                                    )
                                                 }
                                             >
                                                 <Trash2 className="size-3.5" />
                                             </IconButton>
                                         </div>
-                                    ))
+                                        <Button
+                                            asChild
+                                            variant="outline"
+                                            className="h-10 w-full rounded-xl border-sky-100 text-[#172a45]"
+                                        >
+                                            <Link href="/contacts/groups">
+                                                See all groups ({groupsTotal})
+                                                <ArrowRight className="size-3.5" />
+                                            </Link>
+                                        </Button>
+                                    </>
                                 )}
                             </div>
                         </SurfaceCard>

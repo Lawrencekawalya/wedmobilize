@@ -36,6 +36,35 @@ class ContactTest extends TestCase
                 ->has('contacts', 13));
     }
 
+    public function test_contact_management_page_only_features_the_group_with_the_most_contacts(): void
+    {
+        $user = User::factory()->create();
+        $smallGroup = $user->contactGroups()->create(['name' => 'Small group']);
+        $largeGroup = $user->contactGroups()->create(['name' => 'Large group']);
+
+        foreach (range(1, 3) as $index) {
+            $contact = $user->contacts()->create([
+                'name' => "Group contact {$index}",
+                'phone' => '256702'.str_pad((string) $index, 6, '0', STR_PAD_LEFT),
+            ]);
+            $largeGroup->contacts()->attach($contact);
+        }
+
+        $smallGroup->contacts()->attach($user->contacts()->create([
+            'name' => 'Small group contact',
+            'phone' => '256703000001',
+        ]));
+
+        $this->actingAs($user)
+            ->get('/contacts')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('contacts/index')
+                ->where('groupsTotal', 2)
+                ->where('featuredGroup.id', $largeGroup->id)
+                ->where('featuredGroup.contacts_count', 3));
+    }
+
     public function test_complete_contact_list_is_paginated_at_sixty_contacts(): void
     {
         $user = User::factory()->create();
@@ -87,5 +116,31 @@ class ContactTest extends TestCase
                 ->where('filters.search', 'Vendors')
                 ->where('contacts.total', 1)
                 ->where('contacts.data.0.id', $contact->id));
+    }
+
+    public function test_complete_group_list_is_paginated_at_sixty_groups(): void
+    {
+        $user = User::factory()->create();
+
+        foreach (range(1, 65) as $index) {
+            $user->contactGroups()->create(['name' => "Group {$index}"]);
+        }
+
+        $this->actingAs($user)
+            ->get('/contacts/groups')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('contacts/groups')
+                ->where('groups.total', 65)
+                ->where('groups.per_page', 60)
+                ->where('groups.current_page', 1)
+                ->where('groups.last_page', 2)
+                ->has('groups.data', 60));
+
+        $this->get('/contacts/groups?page=2')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('groups.current_page', 2)
+                ->has('groups.data', 5));
     }
 }
