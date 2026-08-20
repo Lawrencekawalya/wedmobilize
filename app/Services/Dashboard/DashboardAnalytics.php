@@ -81,10 +81,26 @@ class DashboardAnalytics
                 $failed = in_array($status, ['failed', 'delivery_failed'], true);
 
                 if (isset($daily[$dateKey])) {
-                    $this->incrementActivity($daily[$dateKey], $accepted, $delivered, $failed);
+                    $bucket = $daily[$dateKey];
+                    $daily[$dateKey] = [
+                        'date' => $bucket['date'],
+                        'label' => $bucket['label'],
+                        'total' => $bucket['total'] + 1,
+                        'accepted' => $bucket['accepted'] + ($accepted ? 1 : 0),
+                        'delivered' => $bucket['delivered'] + ($delivered ? 1 : 0),
+                        'failed' => $bucket['failed'] + ($failed ? 1 : 0),
+                    ];
                 }
                 if (isset($monthly[$month])) {
-                    $this->incrementActivity($monthly[$month], $accepted, $delivered, $failed);
+                    $bucket = $monthly[$month];
+                    $monthly[$month] = [
+                        'month' => $bucket['month'],
+                        'label' => $bucket['label'],
+                        'total' => $bucket['total'] + 1,
+                        'accepted' => $bucket['accepted'] + ($accepted ? 1 : 0),
+                        'delivered' => $bucket['delivered'] + ($delivered ? 1 : 0),
+                        'failed' => $bucket['failed'] + ($failed ? 1 : 0),
+                    ];
                 }
                 if ($sentAt->isSameMonth($today) && $accepted) {
                     $network = $this->networkFor((string) $recipient->phone);
@@ -152,15 +168,6 @@ class DashboardAnalytics
                 'without_group' => (clone $activeContacts)->whereDoesntHave('groups')->count(),
             ],
         ];
-    }
-
-    /** @param DailyActivity|MonthlyActivity $bucket */
-    private function incrementActivity(array &$bucket, bool $accepted, bool $delivered, bool $failed): void
-    {
-        $bucket['total'] = (int) $bucket['total'] + 1;
-        $bucket['accepted'] = (int) $bucket['accepted'] + ($accepted ? 1 : 0);
-        $bucket['delivered'] = (int) $bucket['delivered'] + ($delivered ? 1 : 0);
-        $bucket['failed'] = (int) $bucket['failed'] + ($failed ? 1 : 0);
     }
 
     private function networkFor(string $phone): string
