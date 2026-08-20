@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\ContactImportController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EgoSmsWebhookController;
 use App\Http\Controllers\MessageCenterController;
 use App\Http\Controllers\MessageTemplateController;
@@ -12,7 +13,7 @@ Route::post('webhooks/egosms/delivery/{token}', [EgoSmsWebhookController::class,
     ->name('webhooks.egosms.delivery');
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::inertia('dashboard', 'dashboard')->name('dashboard');
+    Route::get('dashboard', DashboardController::class)->name('dashboard');
     Route::get('contacts', [ContactController::class, 'index'])->name('contacts.index');
     Route::post('contacts', [ContactController::class, 'store'])->name('contacts.store');
     Route::put('contacts/{contact}', [ContactController::class, 'update'])->name('contacts.update');
