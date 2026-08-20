@@ -15,7 +15,7 @@ class ContactController extends Controller
     {
         $contactsQuery = $request->user()->contacts();
         $contactsTotal = (clone $contactsQuery)->count();
-        $contacts = $contactsQuery->with('groups:id,name')->latest()->limit(10)->get();
+        $contacts = $contactsQuery->with('groups:id,name')->latest()->limit(13)->get();
         $groups = $request->user()->contactGroups()->withCount('contacts')->orderBy('name')->get();
 
         return Inertia::render('contacts/index', compact('contacts', 'contactsTotal', 'groups'));
