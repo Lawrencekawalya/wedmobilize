@@ -4,6 +4,7 @@ import type { FormEvent } from 'react';
 import {
     CalendarClock,
     CheckCircle2,
+    CircleAlert,
     ContactRound,
     FileText,
     ClipboardPaste,
@@ -126,10 +127,13 @@ type OutboundMessage = {
         | 'scheduled'
         | 'submitted'
         | 'partially_failed'
+        | 'partially_unknown'
+        | 'unknown'
         | 'failed';
     recipient_count: number;
     submitted_count: number;
     failed_count: number;
+    unknown_count: number;
     sent_count: number;
     delivered_count: number;
     delivery_failed_count: number;
@@ -142,6 +146,19 @@ type OutboundMessage = {
 
 type RecipientMode =
     'all' | 'groups' | 'contacts' | 'paste' | 'file' | 'campaign';
+
+function createIdempotencyKey(): string {
+    if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+        return crypto.randomUUID();
+    }
+
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (value) => {
+        const random = Math.floor(Math.random() * 16);
+        const digit = value === 'x' ? random : (random & 0x3) | 0x8;
+
+        return digit.toString(16);
+    });
+}
 
 export default function MessageCenter({
     section = 'single-bulk',
@@ -254,6 +271,7 @@ function Composer({
     const [templateOpen, setTemplateOpen] = useState(false);
     const templateForm = useForm({ name: '', body: '' });
     const form = useForm({
+        idempotency_key: createIdempotencyKey(),
         recipient_mode: '' as RecipientMode | '',
         group_ids: [] as number[],
         contact_ids: [] as number[],
@@ -350,6 +368,8 @@ function Composer({
         form.post('/messages/send', {
             preserveScroll: true,
             forceFormData: true,
+            onSuccess: () =>
+                form.setData('idempotency_key', createIdempotencyKey()),
             onFinish: () => setConfirmOpen(false),
         });
     }
@@ -944,6 +964,9 @@ function Outbox({
                 {messages.map((message) => {
                     const failed = message.status === 'failed';
                     const partial = message.status === 'partially_failed';
+                    const unknown = ['unknown', 'partially_unknown'].includes(
+                        message.status,
+                    );
 
                     return (
                         <article
@@ -954,6 +977,8 @@ function Outbox({
                                 <div className="flex items-center gap-2">
                                     {failed ? (
                                         <XCircle className="size-4 text-red-500" />
+                                    ) : unknown ? (
+                                        <CircleAlert className="size-4 text-amber-500" />
                                     ) : (
                                         <CheckCircle2
                                             className={`size-4 ${partial ? 'text-amber-500' : 'text-[#00a973]'}`}
@@ -978,6 +1003,9 @@ function Outbox({
                                 <p>
                                     {message.submitted_count} accepted ·{' '}
                                     {message.failed_count} request failed
+                                    {message.unknown_count > 0 && (
+                                        <> · {message.unknown_count} unknown</>
+                                    )}
                                 </p>
                                 {(message.sent_count > 0 ||
                                     message.delivered_count > 0 ||

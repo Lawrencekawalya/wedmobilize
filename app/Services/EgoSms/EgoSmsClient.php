@@ -53,7 +53,7 @@ class EgoSmsClient
         }
         $reference = trim((string) ($data['MsgFollowUpUniqueCode'] ?? ''));
         if ($reference === '') {
-            throw new EgoSmsException('EgoSMS accepted the request without returning a tracking code.');
+            throw new EgoSmsUnknownOutcomeException('EgoSMS reported success without a tracking code. The provider outcome is unknown and this batch will not be retried automatically.');
         }
         $cost = filter_var($data['Cost'] ?? null, FILTER_VALIDATE_INT);
 
@@ -89,17 +89,25 @@ class EgoSmsClient
                 ->timeout(30)
                 ->post($endpoint, $payload);
         } catch (ConnectionException $exception) {
-            throw new EgoSmsException('Could not connect to EgoSMS. The delivery result is unknown.', previous: $exception);
+            throw new EgoSmsUnknownOutcomeException('Could not confirm the EgoSMS response. The provider outcome is unknown and this batch will not be retried automatically.', previous: $exception);
         } catch (Throwable $exception) {
-            throw new EgoSmsException('EgoSMS request failed before a response was received.', previous: $exception);
+            throw new EgoSmsUnknownOutcomeException('EgoSMS failed before a response could be confirmed. The provider outcome is unknown and this batch will not be retried automatically.', previous: $exception);
         }
 
         if (! $response->successful()) {
+            if (($payload['method'] ?? null) === 'SendSms') {
+                throw new EgoSmsUnknownOutcomeException("EgoSMS returned HTTP {$response->status()} after receiving the send request. The provider outcome is unknown and this batch will not be retried automatically.");
+            }
+
             throw new EgoSmsException("EgoSMS returned HTTP {$response->status()}.");
         }
 
         $data = $response->json();
         if (! is_array($data)) {
+            if (($payload['method'] ?? null) === 'SendSms') {
+                throw new EgoSmsUnknownOutcomeException('EgoSMS returned an invalid response to the send request. The provider outcome is unknown and this batch will not be retried automatically.');
+            }
+
             throw new EgoSmsException('EgoSMS returned an invalid response.');
         }
 

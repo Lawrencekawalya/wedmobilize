@@ -30,7 +30,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('contacts/groups/{group}', [ContactController::class, 'updateGroup'])->name('contacts.groups.update');
     Route::delete('contacts/groups/{group}', [ContactController::class, 'destroyGroup'])->name('contacts.groups.destroy');
 
-    Route::post('messages/send', [MessageCenterController::class, 'send'])->name('messages.send');
+    Route::post('messages/send', [MessageCenterController::class, 'send'])
+        ->middleware('throttle:sms-send')
+        ->name('messages.send');
     Route::post('messages/templates', [MessageTemplateController::class, 'store'])->name('messages.templates.store');
     Route::delete('messages/templates/{template}', [MessageTemplateController::class, 'destroy'])->name('messages.templates.destroy');
     Route::get('messages/{section}', [MessageCenterController::class, 'show'])

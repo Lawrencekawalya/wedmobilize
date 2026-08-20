@@ -10,6 +10,8 @@ class OutboundMessage extends Model
 {
     protected $fillable = [
         'body',
+        'idempotency_key',
+        'request_fingerprint',
         'message_template_id',
         'message_campaign_id',
         'recipient_mode',
@@ -21,6 +23,7 @@ class OutboundMessage extends Model
         'estimated_units',
         'submitted_count',
         'failed_count',
+        'unknown_count',
         'cost',
         'error_message',
         'submitted_at',

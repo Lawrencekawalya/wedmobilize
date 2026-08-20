@@ -60,7 +60,7 @@ class MessageCenterController extends Controller
                 ->limit(50)
                 ->select([
                     'id', 'body', 'recipient_mode', 'sender_id', 'status',
-                    'recipient_count', 'submitted_count', 'failed_count',
+                    'recipient_count', 'submitted_count', 'failed_count', 'unknown_count',
                     'cost', 'error_message', 'submitted_at', 'scheduled_at', 'created_at',
                 ])
                 ->withCount([
@@ -124,6 +124,7 @@ class MessageCenterController extends Controller
             ($data['send_timing'] ?? 'now') === 'later' ? Carbon::parse($data['scheduled_at']) : null,
             $data['campaign_name'] ?? null,
             isset($data['template_id']) ? (int) $data['template_id'] : null,
+            $data['idempotency_key'],
         );
 
         if ($message->status === 'scheduled') {
@@ -132,7 +133,12 @@ class MessageCenterController extends Controller
             return to_route('messages.show', ['section' => 'scheduled']);
         }
 
-        if ($message->status === 'failed') {
+        if (in_array($message->status, ['unknown', 'partially_unknown'], true)) {
+            Inertia::flash('toast', [
+                'type' => 'warning',
+                'message' => 'EgoSMS did not return a conclusive response. This message will not be retried automatically; review it in Outbox.',
+            ]);
+        } elseif ($message->status === 'failed') {
             Inertia::flash('toast', [
                 'type' => 'error',
                 'message' => 'EgoSMS did not accept the message. Review it in Outbox.',

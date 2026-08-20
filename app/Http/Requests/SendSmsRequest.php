@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class SendSmsRequest extends FormRequest
@@ -16,6 +17,7 @@ class SendSmsRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'idempotency_key' => ['required', 'uuid'],
             'recipient_mode' => ['required', Rule::in(['all', 'groups', 'contacts', 'paste', 'file', 'campaign'])],
             'group_ids' => ['exclude_unless:recipient_mode,groups', 'required_if:recipient_mode,groups', 'array', 'min:1'],
             'group_ids.*' => ['integer', 'distinct'],
@@ -30,5 +32,12 @@ class SendSmsRequest extends FormRequest
             'send_timing' => ['sometimes', Rule::in(['now', 'later'])],
             'scheduled_at' => ['required_if:send_timing,later', 'nullable', 'date', 'after:now'],
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        if (! $this->filled('idempotency_key')) {
+            $this->merge(['idempotency_key' => (string) Str::uuid()]);
+        }
     }
 }

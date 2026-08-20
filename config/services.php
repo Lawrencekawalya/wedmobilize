@@ -44,6 +44,14 @@ return [
         'batch_size' => (int) env('EGOSMS_BATCH_SIZE', 500),
         'webhook_token' => env('EGOSMS_WEBHOOK_TOKEN'),
         'local_sms_rate' => (float) env('EGOSMS_LOCAL_SMS_RATE', 35),
+        'sending_enabled' => env('EGOSMS_SENDING_ENABLED', true),
+        'enforce_balance' => env('EGOSMS_ENFORCE_BALANCE', true),
+        'max_recipients_per_send' => (int) env('EGOSMS_MAX_RECIPIENTS_PER_SEND', 500),
+        'max_units_per_send' => (int) env('EGOSMS_MAX_UNITS_PER_SEND', 1000),
+        'unit_limit_per_minute' => (int) env('EGOSMS_UNIT_LIMIT_PER_MINUTE', 1000),
+        'daily_unit_limit' => (int) env('EGOSMS_DAILY_UNIT_LIMIT', 5000),
+        'send_requests_per_minute' => (int) env('EGOSMS_SEND_REQUESTS_PER_MINUTE', 3),
+        'dispatch_lock_seconds' => (int) env('EGOSMS_DISPATCH_LOCK_SECONDS', 120),
     ],
 
 ];

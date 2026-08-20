@@ -4,10 +4,12 @@ namespace Tests\Feature;
 
 use App\Models\OutboundMessage;
 use App\Models\User;
+use App\Services\Messaging\SendSmsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -364,6 +366,218 @@ class MessageCenterTest extends TestCase
         Http::assertSentCount(1);
     }
 
+    public function test_repeated_idempotency_key_never_submits_the_same_message_twice(): void
+    {
+        $this->configureEgoSms();
+        Http::fake(['comms.egosms.co/*' => Http::response([
+            'Status' => 'OK', 'Message' => 'Successfully Sent!', 'Cost' => '35',
+            'MsgFollowUpUniqueCode' => 'ApiMSG.idempotent',
+        ])]);
+        $user = User::factory()->create();
+        $contact = $user->contacts()->create(['phone' => '256777071434']);
+        $key = (string) Str::uuid();
+        $payload = [
+            'idempotency_key' => $key,
+            'recipient_mode' => 'contacts',
+            'contact_ids' => [$contact->id],
+            'message' => 'Send this exactly once.',
+        ];
+
+        $this->actingAs($user)->post('/messages/send', $payload)->assertRedirect('/messages/outbox');
+        $this->actingAs($user)->post('/messages/send', $payload)->assertRedirect('/messages/outbox');
+
+        $this->assertSame(1, OutboundMessage::query()->count());
+        Http::assertSentCount(1);
+    }
+
+    public function test_dispatch_claim_prevents_a_submitted_message_from_being_sent_again(): void
+    {
+        $this->configureEgoSms();
+        Http::fake(['comms.egosms.co/*' => Http::response([
+            'Status' => 'OK', 'Message' => 'Successfully Sent!', 'Cost' => '35',
+            'MsgFollowUpUniqueCode' => 'ApiMSG.claimed',
+        ])]);
+        $user = User::factory()->create();
+        $contact = $user->contacts()->create(['phone' => '256777071434']);
+
+        $this->actingAs($user)->post('/messages/send', [
+            'recipient_mode' => 'contacts',
+            'contact_ids' => [$contact->id],
+            'message' => 'Claim once.',
+        ])->assertRedirect('/messages/outbox');
+
+        app(SendSmsService::class)->dispatch(OutboundMessage::query()->sole());
+
+        Http::assertSentCount(1);
+    }
+
+    public function test_emergency_switch_blocks_sending_before_an_outbound_record_is_created(): void
+    {
+        $this->configureEgoSms();
+        config()->set('services.egosms.sending_enabled', false);
+        Http::fake();
+        $user = User::factory()->create();
+        $contact = $user->contacts()->create(['phone' => '256777071434']);
+
+        $this->actingAs($user)->from('/messages/single-bulk')->post('/messages/send', [
+            'recipient_mode' => 'contacts',
+            'contact_ids' => [$contact->id],
+            'message' => 'Must be blocked.',
+        ])->assertRedirect('/messages/single-bulk')->assertSessionHasErrors('message');
+
+        $this->assertDatabaseCount('outbound_messages', 0);
+        Http::assertNothingSent();
+    }
+
+    public function test_weighted_unit_limit_blocks_an_oversized_send(): void
+    {
+        $this->configureEgoSms();
+        config()->set('services.egosms.max_units_per_send', 1);
+        Http::fake();
+        $user = User::factory()->create();
+        $contact = $user->contacts()->create(['phone' => '256777071434']);
+
+        $this->actingAs($user)->from('/messages/single-bulk')->post('/messages/send', [
+            'recipient_mode' => 'contacts',
+            'contact_ids' => [$contact->id],
+            'message' => str_repeat('a', 161),
+        ])->assertRedirect('/messages/single-bulk')->assertSessionHasErrors('message');
+
+        $this->assertDatabaseCount('outbound_messages', 0);
+        Http::assertNothingSent();
+    }
+
+    public function test_ambiguous_provider_timeout_is_recorded_and_never_retried_automatically(): void
+    {
+        $this->configureEgoSms();
+        Http::fake(fn () => Http::failedConnection('Timed out'));
+        $user = User::factory()->create();
+        $contact = $user->contacts()->create(['phone' => '256777071434']);
+
+        $this->actingAs($user)->post('/messages/send', [
+            'recipient_mode' => 'contacts',
+            'contact_ids' => [$contact->id],
+            'message' => 'Do not retry this timeout.',
+        ])->assertRedirect('/messages/outbox');
+
+        $message = OutboundMessage::query()->sole();
+        $this->assertSame('unknown', $message->status);
+        $this->assertSame(1, $message->unknown_count);
+        $this->assertSame('unknown', $message->recipients()->sole()->status);
+
+        app(SendSmsService::class)->dispatch($message);
+        Http::assertSentCount(1);
+    }
+
+    public function test_balance_guard_blocks_a_send_that_would_exceed_available_credit(): void
+    {
+        $this->configureEgoSms();
+        config()->set('services.egosms.enforce_balance', true);
+        Http::fake(['comms.egosms.co/*' => Http::response([
+            'Status' => 'OK',
+            'Balance' => 10,
+        ])]);
+        $user = User::factory()->create();
+        $contact = $user->contacts()->create(['phone' => '256777071434']);
+
+        $this->actingAs($user)->post('/messages/send', [
+            'recipient_mode' => 'contacts',
+            'contact_ids' => [$contact->id],
+            'message' => 'Credit must be checked before sending.',
+        ])->assertRedirect('/messages/outbox');
+
+        $message = OutboundMessage::query()->sole();
+        $this->assertSame('failed', $message->status);
+        $this->assertStringContainsString('Insufficient EgoSMS balance', (string) $message->error_message);
+        $this->assertSame('failed', $message->recipients()->sole()->status);
+        Http::assertSentCount(1);
+        Http::assertSent(fn (Request $request): bool => $request['method'] === 'Balance');
+    }
+
+    public function test_an_idempotency_key_cannot_be_reused_for_different_content(): void
+    {
+        $this->configureEgoSms();
+        Http::fake(['comms.egosms.co/*' => Http::response([
+            'Status' => 'OK', 'Message' => 'Successfully Sent!', 'Cost' => '35',
+            'MsgFollowUpUniqueCode' => 'ApiMSG.collision',
+        ])]);
+        $user = User::factory()->create();
+        $contact = $user->contacts()->create(['phone' => '256777071434']);
+        $key = (string) Str::uuid();
+
+        $this->actingAs($user)->post('/messages/send', [
+            'idempotency_key' => $key,
+            'recipient_mode' => 'contacts',
+            'contact_ids' => [$contact->id],
+            'message' => 'Original content.',
+        ])->assertRedirect('/messages/outbox');
+        $this->actingAs($user)->from('/messages/single-bulk')->post('/messages/send', [
+            'idempotency_key' => $key,
+            'recipient_mode' => 'contacts',
+            'contact_ids' => [$contact->id],
+            'message' => 'Changed content.',
+        ])->assertRedirect('/messages/single-bulk')->assertSessionHasErrors('message');
+
+        $this->assertSame(1, OutboundMessage::query()->count());
+        Http::assertSentCount(1);
+    }
+
+    public function test_provider_success_without_a_reference_is_treated_as_unknown(): void
+    {
+        $this->configureEgoSms();
+        Http::fake(['comms.egosms.co/*' => Http::response([
+            'Status' => 'OK',
+            'Message' => 'Successfully Sent!',
+        ])]);
+        $user = User::factory()->create();
+        $contact = $user->contacts()->create(['phone' => '256777071434']);
+
+        $this->actingAs($user)->post('/messages/send', [
+            'recipient_mode' => 'contacts',
+            'contact_ids' => [$contact->id],
+            'message' => 'A reference is required.',
+        ])->assertRedirect('/messages/outbox');
+
+        $message = OutboundMessage::query()->sole();
+        $this->assertSame('unknown', $message->status);
+        $this->assertSame(1, $message->unknown_count);
+        app(SendSmsService::class)->dispatch($message);
+        Http::assertSentCount(1);
+    }
+
+    public function test_daily_quota_counts_messages_scheduled_for_the_same_future_date(): void
+    {
+        $this->configureEgoSms();
+        config()->set('services.egosms.daily_unit_limit', 2);
+        Http::fake();
+        $user = User::factory()->create();
+        $contact = $user->contacts()->create(['phone' => '256777071434']);
+        $sendAt = now()->addDays(2);
+
+        $user->outboundMessages()->create([
+            'body' => 'Already reserved.',
+            'recipient_mode' => 'contacts',
+            'provider' => 'egosms',
+            'sender_id' => 'WedMobilize',
+            'status' => 'scheduled',
+            'recipient_count' => 1,
+            'sms_parts' => 2,
+            'estimated_units' => 2,
+            'scheduled_at' => $sendAt,
+        ]);
+
+        $this->actingAs($user)->from('/messages/single-bulk')->post('/messages/send', [
+            'recipient_mode' => 'contacts',
+            'contact_ids' => [$contact->id],
+            'message' => 'Would exceed that date.',
+            'send_timing' => 'later',
+            'scheduled_at' => $sendAt->addHour()->toIso8601String(),
+        ])->assertRedirect('/messages/single-bulk')->assertSessionHasErrors('message');
+
+        $this->assertDatabaseCount('outbound_messages', 1);
+        Http::assertNothingSent();
+    }
+
     private function configureEgoSms(): void
     {
         config()->set('services.egosms', [
@@ -374,6 +588,15 @@ class MessageCenterTest extends TestCase
             'priority' => '0',
             'batch_size' => 500,
             'webhook_token' => 'delivery-secret',
+            'local_sms_rate' => 35,
+            'sending_enabled' => true,
+            'enforce_balance' => false,
+            'max_recipients_per_send' => 500,
+            'max_units_per_send' => 1000,
+            'unit_limit_per_minute' => 1000,
+            'daily_unit_limit' => 5000,
+            'send_requests_per_minute' => 100,
+            'dispatch_lock_seconds' => 120,
         ]);
     }
 }
