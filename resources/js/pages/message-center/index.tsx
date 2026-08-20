@@ -106,6 +106,8 @@ type MessageCenterProps = {
     messages?: OutboundMessage[];
     smsConfigured?: boolean;
     smsBalance?: number | null;
+    smsLocalRate?: number;
+    smsEstimatedRemaining?: number | null;
     senderId?: string | null;
     templates?: MessageTemplate[];
     campaigns?: MessageCampaign[];
@@ -148,6 +150,8 @@ export default function MessageCenter({
     messages = [],
     smsConfigured = false,
     smsBalance = null,
+    smsLocalRate = 0,
+    smsEstimatedRemaining = null,
     senderId = null,
     templates = [],
     campaigns = [],
@@ -196,6 +200,8 @@ export default function MessageCenter({
                             groups={groups}
                             smsConfigured={smsConfigured}
                             smsBalance={smsBalance}
+                            smsLocalRate={smsLocalRate}
+                            smsEstimatedRemaining={smsEstimatedRemaining}
                             senderId={senderId}
                             templates={templates}
                             campaigns={campaigns}
@@ -224,6 +230,8 @@ function Composer({
     groups,
     smsConfigured,
     smsBalance,
+    smsLocalRate,
+    smsEstimatedRemaining,
     senderId,
     templates,
     campaigns,
@@ -232,6 +240,8 @@ function Composer({
     groups: RecipientGroup[];
     smsConfigured: boolean;
     smsBalance: number | null;
+    smsLocalRate: number;
+    smsEstimatedRemaining: number | null;
     senderId: string | null;
     templates: MessageTemplate[];
     campaigns: MessageCampaign[];
@@ -368,7 +378,7 @@ function Composer({
                     event.preventDefault()
                 }
             >
-                <div className="grid gap-3 rounded-2xl bg-sky-50/60 p-4 sm:grid-cols-2">
+                <div className="grid gap-4 rounded-2xl bg-sky-50/60 p-4 sm:grid-cols-2 lg:grid-cols-3">
                     <div>
                         <span className="text-xs text-[#7187a0]">
                             EgoSMS balance
@@ -378,6 +388,22 @@ function Composer({
                                 ? 'Unavailable'
                                 : `UGX ${smsBalance.toLocaleString()}`}
                         </p>
+                    </div>
+                    <div>
+                        <span className="text-xs text-[#7187a0]">
+                            Estimated SMS remaining
+                        </span>
+                        <p className="font-semibold text-[#172a45]">
+                            {smsEstimatedRemaining === null
+                                ? 'Unavailable'
+                                : smsEstimatedRemaining.toLocaleString()}
+                        </p>
+                        {smsLocalRate > 0 && (
+                            <p className="text-xs text-[#7187a0]">
+                                At UGX {smsLocalRate.toLocaleString()} per SMS
+                                part.
+                            </p>
+                        )}
                     </div>
                     <div>
                         <span className="text-xs text-[#7187a0]">

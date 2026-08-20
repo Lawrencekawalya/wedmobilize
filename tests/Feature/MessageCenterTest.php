@@ -6,6 +6,7 @@ use App\Models\OutboundMessage;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -53,6 +54,25 @@ class MessageCenterTest extends TestCase
         $this->actingAs(User::factory()->create())
             ->get('/messages/unknown')
             ->assertNotFound();
+    }
+
+    public function test_composer_estimates_remaining_sms_from_balance_and_configured_rate(): void
+    {
+        $this->configureEgoSms();
+        config()->set('services.egosms.local_sms_rate', 35);
+        Cache::forget('egosms.balance');
+        Http::fake(['comms.egosms.co/*' => Http::response([
+            'Status' => 'OK',
+            'Balance' => 4895,
+        ])]);
+
+        $this->actingAs(User::factory()->create())
+            ->get('/messages/single-bulk')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('smsBalance', 4895)
+                ->where('smsLocalRate', 35)
+                ->where('smsEstimatedRemaining', 139));
     }
 
     public function test_user_can_submit_an_sms_to_all_eligible_contacts(): void

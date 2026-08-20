@@ -82,6 +82,7 @@ class MessageCenterController extends Controller
                 $balance = null;
             }
         }
+        $localSmsRate = max(0, (float) config('services.egosms.local_sms_rate', 35));
 
         return Inertia::render('message-center/index', [
             'section' => $section,
@@ -90,6 +91,10 @@ class MessageCenterController extends Controller
             'messages' => $messages,
             'smsConfigured' => $smsConfigured,
             'smsBalance' => $balance,
+            'smsLocalRate' => $localSmsRate,
+            'smsEstimatedRemaining' => $balance !== null && $localSmsRate > 0
+                ? (int) floor($balance / $localSmsRate)
+                : null,
             'senderId' => config('services.egosms.sender_id'),
             'templates' => $request->user()->messageTemplates()->orderBy('name')->get(['id', 'name', 'body']),
             'campaigns' => $request->user()->messageCampaigns()->latest()->get(['id', 'name', 'contact_ids']),
