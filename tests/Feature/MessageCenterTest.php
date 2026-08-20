@@ -227,7 +227,7 @@ class MessageCenterTest extends TestCase
         $this->assertNotNull($recipient->delivered_at);
 
         $this->actingAs($user)->get('/messages/outbox')->assertOk()->assertInertia(fn (Assert $page) => $page
-            ->where('messages.0.sent_count', 0)
+            ->where('messages.0.sent_count', 1)
             ->where('messages.0.delivered_count', 1)
             ->where('messages.0.delivery_failed_count', 0));
         $this->get(route('dashboard'))->assertOk()->assertInertia(fn (Assert $page) => $page

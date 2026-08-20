@@ -64,7 +64,8 @@ class MessageCenterController extends Controller
                     'cost', 'error_message', 'submitted_at', 'scheduled_at', 'created_at',
                 ])
                 ->withCount([
-                    'recipients as sent_count' => fn ($query) => $query->where('status', 'sent'),
+                    // Outbox counters are cumulative: every delivered SMS was also sent.
+                    'recipients as sent_count' => fn ($query) => $query->whereIn('status', ['sent', 'delivered']),
                     'recipients as delivered_count' => fn ($query) => $query->where('status', 'delivered'),
                     'recipients as delivery_failed_count' => fn ($query) => $query->where('status', 'delivery_failed'),
                 ])
