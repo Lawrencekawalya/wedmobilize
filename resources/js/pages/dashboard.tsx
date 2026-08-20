@@ -289,17 +289,17 @@ function ChartCard({
     children: React.ReactNode;
 }) {
     return (
-        <article className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm shadow-slate-200/60 sm:p-6">
+        <article className="min-w-0 rounded-3xl border border-slate-100 bg-white p-4 shadow-sm shadow-slate-200/60 sm:p-6">
             <div className="flex items-center justify-between gap-3">
-                <div>
+                <div className="min-w-0">
                     <p className="text-xs font-semibold tracking-wide text-[#00a879] uppercase">
                         {eyebrow}
                     </p>
-                    <h2 className="mt-1 text-xl font-semibold text-[#172a45]">
+                    <h2 className="mt-1 text-lg font-semibold text-[#172a45] sm:text-xl">
                         {title}
                     </h2>
                 </div>
-                <div className="flex size-10 items-center justify-center rounded-xl bg-sky-50 text-sky-600">
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-sky-600 sm:size-10">
                     <Icon className="size-5" />
                 </div>
             </div>
@@ -319,7 +319,7 @@ function ActivityBars({ points }: { points: ActivityPoint[] }) {
 
     return (
         <>
-            <div className="mt-5 flex flex-wrap gap-3 text-xs text-[#5d7696]">
+            <div className="mt-5 grid grid-cols-3 gap-2 text-[11px] text-[#5d7696] sm:flex sm:flex-wrap sm:gap-3 sm:text-xs">
                 {chartSeries.map((series) => (
                     <span
                         key={series.key}
@@ -332,7 +332,7 @@ function ActivityBars({ points }: { points: ActivityPoint[] }) {
                     </span>
                 ))}
             </div>
-            <div className="relative mt-5 h-52 border-b border-slate-200">
+            <div className="relative mt-4 h-48 min-w-0 border-b border-slate-200 sm:mt-5 sm:h-52">
                 <div className="pointer-events-none absolute inset-0 flex flex-col justify-between">
                     {[0, 1, 2, 3].map((line) => (
                         <span
@@ -341,18 +341,18 @@ function ActivityBars({ points }: { points: ActivityPoint[] }) {
                         />
                     ))}
                 </div>
-                <div className="absolute inset-0 grid grid-cols-7 gap-2 sm:gap-4">
+                <div className="absolute inset-0 grid min-w-0 grid-cols-7 gap-0.5 sm:gap-4">
                     {points.map((point) => (
                         <div
                             key={point.label}
                             className="flex min-w-0 flex-col items-center justify-end"
                         >
-                            <div className="flex h-40 w-full items-end justify-center gap-0.5 sm:gap-1">
+                            <div className="flex h-36 w-full items-end justify-center gap-px sm:h-40 sm:gap-1">
                                 {chartSeries.map((series) => (
                                     <div
                                         key={series.key}
                                         title={`${point.label}: ${point[series.key]} ${series.label.toLowerCase()}`}
-                                        className={`w-2 rounded-t-md transition-all sm:w-3 ${series.color}`}
+                                        className={`w-1.5 rounded-t-sm transition-all sm:w-3 sm:rounded-t-md ${series.color}`}
                                         style={{
                                             height: barHeight(
                                                 point[series.key],
@@ -362,7 +362,7 @@ function ActivityBars({ points }: { points: ActivityPoint[] }) {
                                     />
                                 ))}
                             </div>
-                            <span className="mt-2 text-[10px] font-medium text-[#7187a0] sm:text-xs">
+                            <span className="mt-2 text-[9px] font-medium text-[#7187a0] sm:text-xs">
                                 {point.label}
                             </span>
                         </div>
@@ -379,12 +379,12 @@ function MonthlyBars({ points }: { points: ActivityPoint[] }) {
     const hasData = points.some((point) => point.total > 0);
 
     return (
-        <div className="relative mt-5 h-64 overflow-x-auto border-b border-slate-200">
-            <div className="grid h-full min-w-160 grid-cols-12 gap-2">
+        <div className="relative mt-4 h-52 min-w-0 border-b border-slate-200 sm:mt-5 sm:h-64">
+            <div className="grid h-full min-w-0 grid-cols-12 gap-0.5 sm:gap-2">
                 {points.map((point) => (
                     <div
                         key={point.label}
-                        className="flex flex-col items-center justify-end"
+                        className="flex min-w-0 flex-col items-center justify-end"
                     >
                         {point.accepted > 0 && (
                             <span className="mb-1 text-[10px] font-semibold text-[#4774a4]">
@@ -393,12 +393,12 @@ function MonthlyBars({ points }: { points: ActivityPoint[] }) {
                         )}
                         <div
                             title={`${point.label}: ${point.accepted} accepted, ${point.delivered} delivered, ${point.failed} failed`}
-                            className="w-5 rounded-t-lg bg-linear-to-t from-sky-500 to-emerald-400 sm:w-7"
+                            className="w-3 rounded-t-md bg-linear-to-t from-sky-500 to-emerald-400 sm:w-7 sm:rounded-t-lg"
                             style={{
                                 height: barHeight(point.accepted, maximum, 170),
                             }}
                         />
-                        <span className="mt-2 text-[10px] font-medium text-[#7187a0] sm:text-xs">
+                        <span className="mt-2 text-[8px] font-medium text-[#7187a0] sm:text-xs">
                             {point.label}
                         </span>
                     </div>
