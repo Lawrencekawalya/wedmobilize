@@ -23,15 +23,15 @@ export function PageHeader({
         >
             <div className="min-w-0">
                 {eyebrow && (
-                    <p className="text-sm font-semibold tracking-wide text-[#00a973]">
+                    <p className="text-sm font-semibold tracking-[0.08em] text-[#13a97c] uppercase">
                         {eyebrow}
                     </p>
                 )}
-                <h1 className="mt-1 text-3xl font-semibold tracking-tight text-[#172a45] sm:text-4xl">
+                <h1 className="mt-1 text-3xl font-semibold text-foreground sm:text-4xl">
                     {title}
                 </h1>
                 {description && (
-                    <p className="mt-2 max-w-2xl text-sm leading-6 text-[#5d7696] sm:text-base">
+                    <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
                         {description}
                     </p>
                 )}

@@ -1,3 +1,5 @@
+@import '@fontsource-variable/manrope';
+
 @import 'tailwindcss';
 
 @import 'tw-animate-css';
@@ -9,13 +11,16 @@
 
 @theme {
     --font-sans:
-        'Instrument Sans', ui-sans-serif, system-ui, sans-serif,
+        'Manrope Variable', 'Manrope', ui-sans-serif, system-ui, sans-serif,
         'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
         'Noto Color Emoji';
 
     --radius-lg: var(--radius);
     --radius-md: calc(var(--radius) - 2px);
     --radius-sm: calc(var(--radius) - 4px);
+    --radius-xl: calc(var(--radius) + 2px);
+    --radius-2xl: calc(var(--radius) + 8px);
+    --radius-3xl: calc(var(--radius) + 14px);
 
     --color-background: var(--background);
     --color-foreground: var(--foreground);
@@ -62,74 +67,69 @@
 }
 
 :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
-    --destructive: oklch(0.577 0.245 27.325);
-    --destructive-foreground: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.87 0 0);
-    --chart-1: oklch(0.646 0.222 41.116);
-    --chart-2: oklch(0.6 0.118 184.704);
-    --chart-3: oklch(0.398 0.07 227.392);
-    --chart-4: oklch(0.828 0.189 84.429);
-    --chart-5: oklch(0.769 0.188 70.08);
-    --radius: 0.625rem;
-    --sidebar: oklch(0.985 0 0);
-    --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(0.205 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.97 0 0);
-    --sidebar-accent-foreground: oklch(0.205 0 0);
-    --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.87 0 0);
+    --background: #eaf6fb;
+    --foreground: #14233b;
+    --card: #fbfefd;
+    --card-foreground: #14233b;
+    --popover: #fbfefd;
+    --popover-foreground: #14233b;
+    --primary: #19324f;
+    --primary-foreground: #f9fdfc;
+    --secondary: #e5f2f8;
+    --secondary-foreground: #294b69;
+    --muted: #edf6fa;
+    --muted-foreground: #7187a0;
+    --accent: #dcf8ee;
+    --accent-foreground: #146a59;
+    --destructive: #e45467;
+    --destructive-foreground: #ffffff;
+    --border: #d9eaf2;
+    --input: #d3e7ef;
+    --ring: #40dca7;
+    --chart-1: #14a9e2;
+    --chart-2: #18c997;
+    --chart-3: #547bb2;
+    --chart-4: #94b9dc;
+    --chart-5: #f09a7e;
+    --radius: 1rem;
+    --sidebar: #f9fcfd;
+    --sidebar-foreground: #203651;
+    --sidebar-primary: #19324f;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #e2f7f0;
+    --sidebar-accent-foreground: #146a59;
+    --sidebar-border: #dcebf2;
+    --sidebar-ring: #40dca7;
 }
 
 .dark {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.145 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.145 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.985 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.396 0.141 25.723);
-    --destructive-foreground: oklch(0.637 0.237 25.331);
-    --border: oklch(0.269 0 0);
-    --input: oklch(0.269 0 0);
-    --ring: oklch(0.439 0 0);
-    --chart-1: oklch(0.488 0.243 264.376);
-    --chart-2: oklch(0.696 0.17 162.48);
-    --chart-3: oklch(0.769 0.188 70.08);
-    --chart-4: oklch(0.627 0.265 303.9);
-    --chart-5: oklch(0.645 0.246 16.439);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.985 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(0.269 0 0);
-    --sidebar-ring: oklch(0.439 0 0);
+    --background: #102036;
+    --foreground: #edf8fc;
+    --card: #172b44;
+    --card-foreground: #edf8fc;
+    --popover: #172b44;
+    --popover-foreground: #edf8fc;
+    --primary: #50e0b1;
+    --primary-foreground: #102b2a;
+    --secondary: #203a55;
+    --secondary-foreground: #e8f5fa;
+    --muted: #20364e;
+    --muted-foreground: #a8bed0;
+    --accent: #214b4a;
+    --accent-foreground: #9af0d2;
+    --destructive: #d85e70;
+    --destructive-foreground: #ffffff;
+    --border: #29435d;
+    --input: #31506c;
+    --ring: #50e0b1;
+    --sidebar: #13263d;
+    --sidebar-foreground: #edf8fc;
+    --sidebar-primary: #50e0b1;
+    --sidebar-primary-foreground: #102b2a;
+    --sidebar-accent: #204441;
+    --sidebar-accent-foreground: #9af0d2;
+    --sidebar-border: #29435d;
+    --sidebar-ring: #50e0b1;
 }
 
 @layer base {
@@ -139,5 +139,46 @@
 
     body {
         @apply bg-background text-foreground;
+        min-height: 100svh;
+        background-image:
+            radial-gradient(
+                circle at 8% 0%,
+                rgb(255 255 255 / 75%),
+                transparent 34rem
+            ),
+            radial-gradient(
+                circle at 100% 15%,
+                rgb(183 221 245 / 42%),
+                transparent 38rem
+            ),
+            linear-gradient(145deg, #f1fbfe 0%, #eaf6fb 52%, #e1f0f8 100%);
+        background-attachment: fixed;
+        font-feature-settings:
+            'ss01' 1,
+            'cv02' 1;
+        letter-spacing: -0.012em;
+    }
+
+    h1,
+    h2,
+    h3 {
+        letter-spacing: -0.035em;
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+        letter-spacing: -0.008em;
+    }
+
+    .dark body {
+        background-image:
+            radial-gradient(
+                circle at 8% 0%,
+                rgb(54 90 120 / 45%),
+                transparent 34rem
+            ),
+            linear-gradient(145deg, #132a43 0%, #102036 58%, #0d1c30 100%);
     }
 }

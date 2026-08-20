@@ -16,7 +16,7 @@ export default function Welcome() {
         <>
             <Head title="WedMobilize" />
 
-            <main className="min-h-screen overflow-hidden bg-[#f4fdff] text-[#172a45]">
+            <main className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_8%_0%,#ffffff_0%,transparent_34rem),linear-gradient(145deg,#f1fbfe_0%,#e8f5fb_50%,#dceef8_100%)] text-[#172a45]">
                 <header className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-4 sm:px-6 sm:py-7">
                     <Link
                         href="/"

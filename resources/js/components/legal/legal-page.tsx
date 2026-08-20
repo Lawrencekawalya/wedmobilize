@@ -14,7 +14,7 @@ export function LegalPage({
     children: ReactNode;
 }) {
     return (
-        <main className="min-h-screen bg-[#f4fdff] text-[#172a45]">
+        <main className="min-h-screen bg-[radial-gradient(circle_at_8%_0%,#ffffff_0%,transparent_34rem),linear-gradient(145deg,#f1fbfe_0%,#e8f5fb_50%,#dceef8_100%)] text-[#172a45]">
             <header className="border-b border-[#dceff3] bg-white/80 backdrop-blur">
                 <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-5 py-5 sm:px-8">
                     <Link

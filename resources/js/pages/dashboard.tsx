@@ -149,22 +149,22 @@ export default function Dashboard({
         <>
             <Head title="Dashboard" />
             <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-5 p-4 sm:p-6 lg:p-8">
-                <section className="overflow-hidden rounded-[2rem] bg-linear-to-br from-[#164d7d] via-[#247bb9] to-[#00a87a] p-6 text-white shadow-xl shadow-sky-900/15 sm:p-8">
+                <section className="overflow-hidden rounded-[2.25rem] border border-white/80 bg-[linear-gradient(135deg,#dff5ff_0%,#e9fbf4_54%,#d8edfb_100%)] p-6 text-[#14233b] shadow-[0_28px_65px_-38px_rgba(51,102,145,0.6)] sm:p-8">
                     <div className="grid gap-7 lg:grid-cols-[1fr_auto] lg:items-center">
                         <div>
-                            <p className="text-sm font-medium text-cyan-100">
+                            <p className="text-sm font-semibold tracking-[0.06em] text-[#13a97c] uppercase">
                                 Your event communication hub
                             </p>
                             <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
                                 Welcome back, {firstName}.
                             </h1>
-                            <p className="mt-3 max-w-xl leading-7 text-sky-100">
+                            <p className="mt-3 max-w-xl leading-7 text-[#607b99]">
                                 Your contacts, scheduled announcements, sends,
                                 and delivery reports are summarized here in real
                                 time.
                             </p>
                         </div>
-                        <div className="grid min-w-0 gap-3 rounded-2xl border border-white/15 bg-white/12 p-4 backdrop-blur sm:min-w-96 sm:grid-cols-3">
+                        <div className="grid min-w-0 gap-3 rounded-3xl border border-white/80 bg-white/55 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur sm:min-w-96 sm:grid-cols-3">
                             <WalletStat
                                 label="EgoSMS balance"
                                 value={
@@ -185,7 +185,7 @@ export default function Dashboard({
                                 label="Local rate"
                                 value={`${formatMoney(sms.local_rate)}/SMS`}
                             />
-                            <p className="text-xs leading-5 text-cyan-100 sm:col-span-3">
+                            <p className="text-xs leading-5 text-[#68809d] sm:col-span-3">
                                 Capacity assumes one local, single-part SMS.
                                 Multipart and Unicode messages use more units.
                             </p>
@@ -270,9 +270,9 @@ export default function Dashboard({
 
 function WalletStat({ label, value }: { label: string; value: string }) {
     return (
-        <div className="rounded-xl bg-white/12 p-3">
-            <p className="text-xs text-cyan-100">{label}</p>
-            <p className="mt-1 font-semibold text-white">{value}</p>
+        <div className="rounded-2xl bg-white/70 p-3 shadow-sm shadow-sky-950/5">
+            <p className="text-xs text-[#7187a0]">{label}</p>
+            <p className="mt-1 font-semibold text-[#172a45]">{value}</p>
         </div>
     );
 }
